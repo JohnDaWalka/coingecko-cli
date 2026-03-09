@@ -72,14 +72,11 @@ verify_checksum() {
     exit 1
   fi
   local actual
-  if command -v sha256sum >/dev/null 2>&1; then
-    actual=$(sha256sum "$file" | awk '{print $1}')
-  elif command -v shasum >/dev/null 2>&1; then
-    actual=$(shasum -a 256 "$file" | awk '{print $1}')
-  else
-    echo "Error: no sha256sum or shasum found"
+  if ! command -v sha256sum >/dev/null 2>&1; then
+    echo "Error: sha256sum not found"
     exit 1
   fi
+  actual=$(sha256sum "$file" | awk '{print $1}')
   if [ "$expected" != "$actual" ]; then
     echo "Error: checksum mismatch for ${filename}"
     echo "  Expected: ${expected}"
