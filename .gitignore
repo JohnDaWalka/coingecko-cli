@@ -1,5 +1,5 @@
 # Binaries
-cg
+/cg
 *.exe
 *.exe~
 *.dll
