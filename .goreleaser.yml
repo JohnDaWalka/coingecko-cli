@@ -39,3 +39,7 @@ homebrew_casks:
     description: CoinGecko CLI — cryptocurrency data at your fingertips
     binaries:
       - cg
+    hooks:
+      post:
+        install: |
+          system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/cg"]
