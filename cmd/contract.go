@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -32,7 +33,7 @@ func init() {
 	contractCmd.Flags().String("address", "", "Contract address (required)")
 	contractCmd.Flags().String("platform", "", "Platform ID for aggregated mode (e.g. ethereum). See https://docs.coingecko.com/reference/asset-platforms-list")
 	contractCmd.Flags().String("network", "", "Network ID for onchain mode (e.g. eth). See https://docs.coingecko.com/reference/networks-list")
-	contractCmd.Flags().Bool("onchain", false, "Use DEX price from GeckoTerminal")
+	contractCmd.Flags().Bool("onchain", false, "Use DEX price from GeckoTerminal (paid plan required)")
 	contractCmd.Flags().String("vs", "usd", "Target currency")
 	contractCmd.Flags().String("export", "", "Export to CSV file path")
 	rootCmd.AddCommand(contractCmd)
@@ -44,6 +45,7 @@ func runContract(cmd *cobra.Command, args []string) error {
 	network, _ := cmd.Flags().GetString("network")
 	onchain, _ := cmd.Flags().GetBool("onchain")
 	vs, _ := cmd.Flags().GetString("vs")
+	vs = strings.ToLower(vs)
 	exportPath, _ := cmd.Flags().GetString("export")
 	jsonOut := outputJSON(cmd)
 
@@ -81,13 +83,21 @@ func runContract(cmd *cobra.Command, args []string) error {
 				"include_24hr_vol":          "true",
 				"include_24hr_price_change": "true",
 			}
-			note := ""
-			if strings.ToLower(vs) != "usd" {
-				note = fmt.Sprintf("Additional request: GET /exchange_rates (currency conversion from USD to %s)", vs)
+			var notes []string
+			// Onchain endpoint is paid-only; always show pro-tier request in dry-run.
+			dryCfg := cfg
+			if !cfg.IsPaid() {
+				paidCfg := *cfg
+				paidCfg.Tier = "paid"
+				dryCfg = &paidCfg
+				notes = append(notes, "Paid plan required for --onchain")
 			}
-			return printDryRunFull(cfg, "contract", "--onchain",
-				"/onchain/simple/networks/"+network+"/token_price/"+address,
-				params, nil, note)
+			if vs != "usd" {
+				notes = append(notes, fmt.Sprintf("Additional request: GET /exchange_rates (currency conversion from USD to %s)", vs))
+			}
+			return printDryRunFull(dryCfg, "contract", "--onchain",
+				fmt.Sprintf("/onchain/simple/networks/%s/token_price/%s", url.PathEscape(network), address),
+				params, nil, strings.Join(notes, "; "))
 		}
 		params := map[string]string{
 			"contract_addresses":  address,
@@ -97,7 +107,7 @@ func runContract(cmd *cobra.Command, args []string) error {
 			"include_24hr_change": "true",
 		}
 		return printDryRunWithOp(cfg, "contract", "default",
-			"/simple/token_price/"+platform, params, nil)
+			"/simple/token_price/"+url.PathEscape(platform), params, nil)
 	}
 
 	client := newAPIClient(cfg)
@@ -116,19 +126,7 @@ func runContract(cmd *cobra.Command, args []string) error {
 
 		priceStr, ok := resp.Data.Attributes.TokenPrices[address]
 		if !ok {
-			// Try case-insensitive lookup.
-			lowerAddr := strings.ToLower(address)
-			for k, v := range resp.Data.Attributes.TokenPrices {
-				if strings.ToLower(k) == lowerAddr {
-					priceStr = v
-					address = k // use the key as returned by API
-					ok = true
-					break
-				}
-			}
-			if !ok {
-				return fmt.Errorf("no data returned for address %s", address)
-			}
+			return fmt.Errorf("no data returned for address %s", address)
 		}
 		displayAddr = address
 
@@ -148,13 +146,13 @@ func runContract(cmd *cobra.Command, args []string) error {
 		}
 
 		// Currency conversion for non-USD.
-		if strings.ToLower(vs) != "usd" {
+		if vs != "usd" {
 			rates, err := client.ExchangeRates(ctx)
 			if err != nil {
 				return fmt.Errorf("fetching exchange rates: %w", err)
 			}
 			usdRate, usdOK := rates.Rates["usd"]
-			targetRate, targetOK := rates.Rates[strings.ToLower(vs)]
+			targetRate, targetOK := rates.Rates[vs]
 			if !usdOK || !targetOK {
 				return fmt.Errorf("unsupported currency %q", vs)
 			}
@@ -173,19 +171,7 @@ func runContract(cmd *cobra.Command, args []string) error {
 
 		data, ok := resp[address]
 		if !ok {
-			// Try case-insensitive lookup.
-			lowerAddr := strings.ToLower(address)
-			for k, v := range resp {
-				if strings.ToLower(k) == lowerAddr {
-					data = v
-					address = k
-					ok = true
-					break
-				}
-			}
-			if !ok {
-				return fmt.Errorf("no data returned for address %s", address)
-			}
+			return fmt.Errorf("no data returned for address %s", address)
 		}
 		displayAddr = address
 

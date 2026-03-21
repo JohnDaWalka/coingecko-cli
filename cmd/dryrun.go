@@ -93,7 +93,12 @@ func printDryRunFull(cfg *config.Config, cmdName, opKey, endpoint string, params
 	}
 
 	if meta, ok := commandMeta[cmdName]; ok {
-		out.OASSpec = meta.OASSpec
+		// Look up per-mode spec first, fall back to command-level.
+		if opKey != "" && meta.OASSpecs != nil {
+			out.OASSpec = meta.OASSpecs[opKey]
+		} else {
+			out.OASSpec = meta.OASSpec
+		}
 		if opKey != "" && meta.OASOperationIDs != nil {
 			out.OASOperationID = meta.OASOperationIDs[opKey]
 		} else {

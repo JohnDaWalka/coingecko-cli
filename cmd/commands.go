@@ -16,8 +16,10 @@ type commandAnnotation struct {
 	OASOperationID  string
 	OASOperationIDs map[string]string
 	OASSpec         string
-	Transport       string // "rest" (default) or "websocket"
+	OASSpecs        map[string]string // Per-mode OAS spec overrides (e.g. "--onchain" → "coingecko-pro.json")
+	Transport       string            // "rest" (default) or "websocket"
 	PaidOnly        bool
+	PaidModes       map[string]bool // Per-mode paid-only flags (e.g. "--onchain" → true)
 	RequiresAuth    bool
 }
 
@@ -86,7 +88,13 @@ var commandMeta = map[string]commandAnnotation{
 			"default":   "simple-token-price",
 			"--onchain": "onchain-simple-price",
 		},
-		OASSpec:      "coingecko-demo.json",
+		OASSpecs: map[string]string{
+			"default":   "coingecko-demo.json",
+			"--onchain": "coingecko-pro.json",
+		},
+		PaidModes: map[string]bool{
+			"--onchain": true,
+		},
 		RequiresAuth: true,
 	},
 }
@@ -146,11 +154,14 @@ type commandInfo struct {
 	OutputFormats   []string          `json:"output_formats"`
 	RequiresAuth    bool              `json:"requires_auth"`
 	PaidOnly        bool              `json:"paid_only"`
+	PaidModes       map[string]bool   `json:"paid_modes,omitempty"`
 	Transport       string            `json:"transport,omitempty"`
 	APIEndpoint     string            `json:"api_endpoint,omitempty"`
 	APIEndpoints    map[string]string `json:"api_endpoints,omitempty"`
 	OASOperationID  string            `json:"oas_operation_id,omitempty"`
 	OASOperationIDs map[string]string `json:"oas_operation_ids,omitempty"`
+	OASSpec         string            `json:"oas_spec,omitempty"`
+	OASSpecs        map[string]string `json:"oas_specs,omitempty"`
 }
 
 type commandCatalog struct {
@@ -226,12 +237,15 @@ func runCommands(cmd *cobra.Command, args []string) error {
 
 		if meta, ok := commandMeta[c.Name()]; ok {
 			info.PaidOnly = meta.PaidOnly
+			info.PaidModes = meta.PaidModes
 			info.RequiresAuth = meta.RequiresAuth
 			info.Transport = meta.Transport
 			info.APIEndpoint = meta.APIEndpoint
 			info.APIEndpoints = meta.APIEndpoints
 			info.OASOperationID = meta.OASOperationID
 			info.OASOperationIDs = meta.OASOperationIDs
+			info.OASSpec = meta.OASSpec
+			info.OASSpecs = meta.OASSpecs
 		}
 
 		catalog.Commands = append(catalog.Commands, info)
