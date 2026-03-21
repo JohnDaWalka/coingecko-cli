@@ -24,9 +24,9 @@ func (c *Client) SimplePrice(ctx context.Context, ids []string, vsCurrency strin
 // https://docs.coingecko.com/v3.0.1/reference/simple-price
 func (c *Client) SimplePriceBySymbols(ctx context.Context, symbols []string, vsCurrency string) (PriceResponse, error) {
 	params := url.Values{
-		"symbols":              {strings.Join(symbols, ",")},
-		"vs_currencies":        {vsCurrency},
-		"include_24hr_change":  {"true"},
+		"symbols":             {strings.Join(symbols, ",")},
+		"vs_currencies":       {vsCurrency},
+		"include_24hr_change": {"true"},
 	}
 	var result PriceResponse
 	err := c.get(ctx, "/simple/price?"+params.Encode(), &result)
@@ -190,6 +190,46 @@ func (c *Client) TopGainersLosers(ctx context.Context, vsCurrency, duration, top
 	}
 	var result GainersLosersResponse
 	err := c.get(ctx, "/coins/top_gainers_losers?"+params.Encode(), &result)
+	return &result, err
+}
+
+// SimpleTokenPrice fetches current prices for tokens by contract address on a given platform.
+// https://docs.coingecko.com/reference/simple-token-price
+func (c *Client) SimpleTokenPrice(ctx context.Context, platform string, addresses []string, vsCurrency string) (TokenPriceResponse, error) {
+	params := url.Values{
+		"contract_addresses":  {strings.Join(addresses, ",")},
+		"vs_currencies":       {vsCurrency},
+		"include_market_cap":  {"true"},
+		"include_24hr_vol":    {"true"},
+		"include_24hr_change": {"true"},
+	}
+	var result TokenPriceResponse
+	err := c.get(ctx, fmt.Sprintf("/simple/token_price/%s?%s", url.PathEscape(platform), params.Encode()), &result)
+	return result, err
+}
+
+// OnchainSimpleTokenPrice fetches DEX prices for tokens by contract address on a given network (paid plans only).
+// https://docs.coingecko.com/reference/onchain-simple-price
+func (c *Client) OnchainSimpleTokenPrice(ctx context.Context, network string, addresses []string) (*OnchainTokenPriceResponse, error) {
+	if err := c.requirePaid(); err != nil {
+		return nil, err
+	}
+	params := url.Values{
+		"include_market_cap":        {"true"},
+		"include_24hr_vol":          {"true"},
+		"include_24hr_price_change": {"true"},
+	}
+	var result OnchainTokenPriceResponse
+	err := c.get(ctx, fmt.Sprintf("/onchain/simple/networks/%s/token_price/%s?%s",
+		url.PathEscape(network), strings.Join(addresses, ","), params.Encode()), &result)
+	return &result, err
+}
+
+// ExchangeRates fetches BTC-based exchange rates for all supported currencies.
+// https://docs.coingecko.com/reference/exchange-rates
+func (c *Client) ExchangeRates(ctx context.Context) (*ExchangeRatesResponse, error) {
+	var result ExchangeRatesResponse
+	err := c.get(ctx, "/exchange_rates", &result)
 	return &result, err
 }
 

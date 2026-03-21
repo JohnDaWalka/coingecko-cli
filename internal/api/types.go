@@ -47,17 +47,17 @@ type TrendingCoinWrapper struct {
 }
 
 type TrendingCoin struct {
-	ID            string             `json:"id"`
-	Name          string             `json:"name"`
-	Symbol        string             `json:"symbol"`
-	MarketCapRank int                `json:"market_cap_rank"`
-	Score         int                `json:"score"`
-	Data          *TrendingCoinData  `json:"data"`
+	ID            string            `json:"id"`
+	Name          string            `json:"name"`
+	Symbol        string            `json:"symbol"`
+	MarketCapRank int               `json:"market_cap_rank"`
+	Score         int               `json:"score"`
+	Data          *TrendingCoinData `json:"data"`
 }
 
 type TrendingCoinData struct {
-	Price                      float64                    `json:"price"`
-	PriceChangePercentage24h   map[string]float64         `json:"price_change_percentage_24h"`
+	Price                    float64            `json:"price"`
+	PriceChangePercentage24h map[string]float64 `json:"price_change_percentage_24h"`
 }
 
 type TrendingNFT struct {
@@ -156,6 +156,41 @@ func (g GainerCoin) MarshalJSON() ([]byte, error) {
 		return json.Marshal(Alias(g))
 	}
 	return json.Marshal(g.Extra)
+}
+
+// TokenPriceResponse: map[contractAddress]map[field]value
+// Fields: {vs} (price), {vs}_market_cap, {vs}_24h_vol, {vs}_24h_change, last_updated_at
+// https://docs.coingecko.com/reference/simple-token-price
+type TokenPriceResponse map[string]map[string]float64
+
+// OnchainTokenPriceResponse is the GeckoTerminal simple token price response.
+// All numeric values are strings; callers must use strconv.ParseFloat.
+// https://docs.coingecko.com/reference/onchain-simple-price
+type OnchainTokenPriceResponse struct {
+	Data struct {
+		ID         string `json:"id"`
+		Type       string `json:"type"`
+		Attributes struct {
+			TokenPrices       map[string]string `json:"token_prices"`
+			MarketCapUSD      map[string]string `json:"market_cap_usd"`
+			H24VolumeUSD      map[string]string `json:"h24_volume_usd"`
+			H24PriceChangePct map[string]string `json:"h24_price_change_percentage"`
+		} `json:"attributes"`
+	} `json:"data"`
+}
+
+// ExchangeRatesResponse contains BTC-based exchange rates for all supported currencies.
+// https://docs.coingecko.com/reference/exchange-rates
+type ExchangeRatesResponse struct {
+	Rates map[string]ExchangeRate `json:"rates"`
+}
+
+// ExchangeRate represents a single currency rate relative to BTC.
+type ExchangeRate struct {
+	Name  string  `json:"name"`
+	Unit  string  `json:"unit"`
+	Value float64 `json:"value"`
+	Type  string  `json:"type"`
 }
 
 type CoinDetail struct {

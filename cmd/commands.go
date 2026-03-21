@@ -77,6 +77,18 @@ var commandMeta = map[string]commandAnnotation{
 		PaidOnly:     true,
 		RequiresAuth: true,
 	},
+	"contract": {
+		APIEndpoints: map[string]string{
+			"default":   "/simple/token_price/{platform}",
+			"--onchain": "/onchain/simple/networks/{network}/token_price/{addresses}",
+		},
+		OASOperationIDs: map[string]string{
+			"default":   "simple-token-price",
+			"--onchain": "onchain-simple-price",
+		},
+		OASSpec:      "coingecko-demo.json",
+		RequiresAuth: true,
+	},
 }
 
 type flagInfo struct {

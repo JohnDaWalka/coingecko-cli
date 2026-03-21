@@ -515,6 +515,128 @@ func TestCoinDetail_PathEscaping(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// SimpleTokenPrice
+// ---------------------------------------------------------------------------
+
+func TestSimpleTokenPrice_Success(t *testing.T) {
+	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/simple/token_price/ethereum", r.URL.Path)
+		q := r.URL.Query()
+		assert.Equal(t, "0xdac17f958d2ee523a2206206994597c13d831ec7", q.Get("contract_addresses"))
+		assert.Equal(t, "usd", q.Get("vs_currencies"))
+		assert.Equal(t, "true", q.Get("include_market_cap"))
+		assert.Equal(t, "true", q.Get("include_24hr_vol"))
+		assert.Equal(t, "true", q.Get("include_24hr_change"))
+
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte(`{
+			"0xdac17f958d2ee523a2206206994597c13d831ec7": {
+				"usd": 1.001,
+				"usd_market_cap": 50000000000,
+				"usd_24h_vol": 30000000000,
+				"usd_24h_change": 0.05
+			}
+		}`))
+	})
+	defer srv.Close()
+
+	result, err := c.SimpleTokenPrice(context.Background(), "ethereum", []string{"0xdac17f958d2ee523a2206206994597c13d831ec7"}, "usd")
+	require.NoError(t, err)
+	addr := "0xdac17f958d2ee523a2206206994597c13d831ec7"
+	assert.Equal(t, 1.001, result[addr]["usd"])
+	assert.Equal(t, float64(50000000000), result[addr]["usd_market_cap"])
+	assert.Equal(t, float64(30000000000), result[addr]["usd_24h_vol"])
+	assert.Equal(t, 0.05, result[addr]["usd_24h_change"])
+}
+
+func TestSimpleTokenPrice_PathEncoding(t *testing.T) {
+	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/simple/token_price/binance-smart-chain", r.URL.Path)
+		_, _ = w.Write([]byte(`{}`))
+	})
+	defer srv.Close()
+
+	_, err := c.SimpleTokenPrice(context.Background(), "binance-smart-chain", []string{"0xaddr"}, "usd")
+	require.NoError(t, err)
+}
+
+// ---------------------------------------------------------------------------
+// OnchainSimpleTokenPrice
+// ---------------------------------------------------------------------------
+
+func TestOnchainSimpleTokenPrice_Success(t *testing.T) {
+	c, srv := testPaidClient(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/onchain/simple/networks/eth/token_price/0xaddr", r.URL.Path)
+		q := r.URL.Query()
+		assert.Equal(t, "true", q.Get("include_market_cap"))
+		assert.Equal(t, "true", q.Get("include_24hr_vol"))
+		assert.Equal(t, "true", q.Get("include_24hr_price_change"))
+
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte(`{
+			"data": {
+				"id": "123",
+				"type": "simple_token_price",
+				"attributes": {
+					"token_prices": {"0xaddr": "2289.33"},
+					"market_cap_usd": {"0xaddr": "6692452895.779648"},
+					"h24_volume_usd": {"0xaddr": "965988358.733808"},
+					"h24_price_change_percentage": {"0xaddr": "3.387"}
+				}
+			}
+		}`))
+	})
+	defer srv.Close()
+
+	result, err := c.OnchainSimpleTokenPrice(context.Background(), "eth", []string{"0xaddr"})
+	require.NoError(t, err)
+	assert.Equal(t, "2289.33", result.Data.Attributes.TokenPrices["0xaddr"])
+	assert.Equal(t, "6692452895.779648", result.Data.Attributes.MarketCapUSD["0xaddr"])
+	assert.Equal(t, "965988358.733808", result.Data.Attributes.H24VolumeUSD["0xaddr"])
+	assert.Equal(t, "3.387", result.Data.Attributes.H24PriceChangePct["0xaddr"])
+}
+
+func TestOnchainSimpleTokenPrice_RequiresPaid(t *testing.T) {
+	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("should not reach the server with a demo client")
+	})
+	defer srv.Close()
+
+	_, err := c.OnchainSimpleTokenPrice(context.Background(), "eth", []string{"0xaddr"})
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrPlanRestricted)
+}
+
+// ---------------------------------------------------------------------------
+// ExchangeRates
+// ---------------------------------------------------------------------------
+
+func TestExchangeRates_Success(t *testing.T) {
+	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/exchange_rates", r.URL.Path)
+
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte(`{
+			"rates": {
+				"btc": {"name": "Bitcoin", "unit": "BTC", "value": 1.0, "type": "crypto"},
+				"usd": {"name": "US Dollar", "unit": "$", "value": 67187.0, "type": "fiat"},
+				"eur": {"name": "Euro", "unit": "\u20ac", "value": 62345.0, "type": "fiat"}
+			}
+		}`))
+	})
+	defer srv.Close()
+
+	result, err := c.ExchangeRates(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, float64(1), result.Rates["btc"].Value)
+	assert.Equal(t, float64(67187), result.Rates["usd"].Value)
+	assert.Equal(t, "US Dollar", result.Rates["usd"].Name)
+	assert.Equal(t, "$", result.Rates["usd"].Unit)
+	assert.Equal(t, "fiat", result.Rates["usd"].Type)
+	assert.Equal(t, float64(62345), result.Rates["eur"].Value)
+}
+
+// ---------------------------------------------------------------------------
 // FetchAllMarkets (existing tests kept below)
 // ---------------------------------------------------------------------------
 

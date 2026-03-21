@@ -103,6 +103,8 @@ coingecko-cli/
 | `cg history --from/--to --interval hourly` | `/coins/{id}/market_chart/range` (batched) | `coins-id-market-chart-range` |
 | `cg history --from/--to --ohlc` | `/coins/{id}/ohlc/range` (batched for large ranges) | `coins-id-ohlc-range` |
 | `cg top-gainers-losers` | `/coins/top_gainers_losers` | `coins-top-gainers-losers` |
+| `cg contract` | `/simple/token_price/{platform}` | `simple-token-price` |
+| `cg contract --onchain` | `/onchain/simple/networks/{network}/token_price/{addresses}` | `onchain-simple-price` |
 | `cg watch` | `wss://stream.coingecko.com/v1` (WebSocket) | — |
 
 ## Distribution
@@ -134,3 +136,5 @@ coingecko-cli/
 - **Command test seams**: `cmd/client_factory.go` exposes injectable `newAPIClient`, `loadConfig`, and `newStreamer` vars so command integration tests can swap in httptest servers and test configs without touching real API or config files
 - **Pagination helper**: `FetchAllMarkets` in `internal/api/coins.go` handles multi-page fetching (250/page) with trim-to-total, used by both `cg markets` and `cg tui markets`
 - **TUI trending tier awareness**: demo gets 15 coins, paid gets 30 via `show_max=coins` API param
+- **Onchain currency conversion**: `--onchain` returns USD only. For `--vs` non-USD, the CLI fetches `/exchange_rates` and multiplies price/mcap/volume by `targetRate/usdRate`. 24h change % is unchanged. No caching — one extra API call per non-USD onchain request
+- **Platform/network discoverability**: `--platform` IDs come from `/asset_platforms` ([docs](https://docs.coingecko.com/reference/asset-platforms-list)), `--network` IDs from `/onchain/networks` ([docs](https://docs.coingecko.com/reference/networks-list)). These are different namespaces — no auto-translation between them
