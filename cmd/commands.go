@@ -88,13 +88,7 @@ var commandMeta = map[string]commandAnnotation{
 			"default":   "simple-token-price",
 			"--onchain": "onchain-simple-price",
 		},
-		OASSpecs: map[string]string{
-			"default":   "coingecko-demo.json",
-			"--onchain": "coingecko-pro.json",
-		},
-		PaidModes: map[string]bool{
-			"--onchain": true,
-		},
+		OASSpec:      "coingecko-demo.json",
 		RequiresAuth: true,
 	},
 }

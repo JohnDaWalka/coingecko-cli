@@ -72,7 +72,7 @@ func TestContract_DryRun_Onchain(t *testing.T) {
 		t.Fatal("should not make HTTP call in dry-run mode")
 	})
 	defer srv.Close()
-	withTestClientPaid(t, srv)
+	withTestClientDemo(t, srv)
 
 	stdout, _, err := executeCommand(t, "contract", "--address", "0xabc", "--network", "eth", "--onchain", "--dry-run", "-o", "json")
 	require.NoError(t, err)
@@ -81,35 +81,12 @@ func TestContract_DryRun_Onchain(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(stdout), &out))
 	assert.Equal(t, "GET", out.Method)
 	assert.Contains(t, out.URL, "/onchain/simple/networks/eth/token_price/0xabc")
-	assert.Contains(t, out.URL, "pro-api.coingecko.com")
 	assert.Equal(t, "true", out.Params["include_market_cap"])
 	assert.Equal(t, "true", out.Params["include_24hr_vol"])
 	assert.Equal(t, "true", out.Params["include_24hr_price_change"])
 	assert.Equal(t, "onchain-simple-price", out.OASOperationID)
-	assert.Equal(t, "coingecko-pro.json", out.OASSpec)
+	assert.Equal(t, "coingecko-demo.json", out.OASSpec)
 	assert.Empty(t, out.Note)
-}
-
-func TestContract_DryRun_Onchain_DemoTier(t *testing.T) {
-	srv := newTestServer(func(w http.ResponseWriter, r *http.Request) {
-		t.Fatal("should not make HTTP call in dry-run mode")
-	})
-	defer srv.Close()
-	withTestClientDemo(t, srv)
-
-	stdout, _, err := executeCommand(t, "contract", "--address", "0xabc", "--network", "eth", "--onchain", "--dry-run", "-o", "json")
-	require.NoError(t, err)
-
-	var out dryRunOutput
-	require.NoError(t, json.Unmarshal([]byte(stdout), &out))
-	// Even with demo config, onchain dry-run must show pro-tier URL and spec.
-	assert.Contains(t, out.URL, "pro-api.coingecko.com")
-	assert.Contains(t, out.URL, "/onchain/simple/networks/eth/token_price/0xabc")
-	assert.Equal(t, "coingecko-pro.json", out.OASSpec)
-	assert.Equal(t, "onchain-simple-price", out.OASOperationID)
-	assert.Contains(t, out.Note, "Paid plan required")
-	// Auth header should reflect pro-tier.
-	assert.NotEmpty(t, out.Headers["x-cg-pro-api-key"])
 }
 
 func TestContract_DryRun_Onchain_NonUSD(t *testing.T) {
@@ -216,7 +193,7 @@ func TestContract_Onchain_JSONOutput(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(resp)
 	})
 	defer srv.Close()
-	withTestClientPaid(t, srv)
+	withTestClientDemo(t, srv)
 
 	stdout, _, err := executeCommand(t, "contract", "--address", addr, "--network", "eth", "--onchain", "-o", "json")
 	require.NoError(t, err)
@@ -310,15 +287,33 @@ func TestContract_Onchain_UnsupportedCurrency(t *testing.T) {
 	assert.Contains(t, err.Error(), "unsupported currency")
 }
 
-func TestContract_Onchain_RequiresPaid(t *testing.T) {
+func TestContract_Onchain_DemoTier(t *testing.T) {
+	addr := "0xabc"
 	srv := newTestServer(func(w http.ResponseWriter, r *http.Request) {
-		t.Fatal("should not reach the server with a demo client")
+		assert.Contains(t, r.URL.Path, "/onchain/simple/networks/eth/token_price/")
+		resp := map[string]interface{}{
+			"data": map[string]interface{}{
+				"id":   "1",
+				"type": "simple_token_price",
+				"attributes": map[string]interface{}{
+					"token_prices":                map[string]string{addr: "100.5"},
+					"market_cap_usd":              map[string]string{addr: "500000"},
+					"h24_volume_usd":              map[string]string{addr: "250000"},
+					"h24_price_change_percentage": map[string]string{addr: "2.5"},
+				},
+			},
+		}
+		_ = json.NewEncoder(w).Encode(resp)
 	})
 	defer srv.Close()
 	withTestClientDemo(t, srv)
 
-	_, _, err := executeCommand(t, "contract", "--address", "0xabc", "--network", "eth", "--onchain", "-o", "json")
-	require.Error(t, err)
+	stdout, _, err := executeCommand(t, "contract", "--address", addr, "--network", "eth", "--onchain", "-o", "json")
+	require.NoError(t, err)
+
+	var result map[string]map[string]float64
+	require.NoError(t, json.Unmarshal([]byte(stdout), &result))
+	assert.InDelta(t, 100.5, result[addr]["price"], 0.01)
 }
 
 func TestContract_CatalogMetadata(t *testing.T) {
@@ -337,23 +332,16 @@ func TestContract_CatalogMetadata(t *testing.T) {
 	}
 	require.NotNil(t, contractInfo, "contract command not in catalog")
 
-	// Per-mode OAS specs should be present.
-	assert.Equal(t, "coingecko-demo.json", contractInfo.OASSpecs["default"])
-	assert.Equal(t, "coingecko-pro.json", contractInfo.OASSpecs["--onchain"])
+	// OAS spec should be present (both modes use demo-compatible endpoints).
+	assert.Equal(t, "coingecko-demo.json", contractInfo.OASSpec)
 
-	// Per-mode paid flags: --onchain is paid-only.
-	assert.True(t, contractInfo.PaidModes["--onchain"])
-
-	// Command-level paid_only is false (default mode is free).
+	// Not paid-only — onchain endpoint is available on both demo and paid tiers.
 	assert.False(t, contractInfo.PaidOnly)
+	assert.Empty(t, contractInfo.PaidModes)
 
-	// Flag description for --onchain includes paid-only note.
-	for _, f := range contractInfo.Flags {
-		if f.Name == "onchain" {
-			assert.Contains(t, f.Description, "paid plan required")
-			break
-		}
-	}
+	// Both operation IDs should be present.
+	assert.Equal(t, "simple-token-price", contractInfo.OASOperationIDs["default"])
+	assert.Equal(t, "onchain-simple-price", contractInfo.OASOperationIDs["--onchain"])
 }
 
 func TestContract_Export_CSV(t *testing.T) {

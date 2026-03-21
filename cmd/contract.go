@@ -33,7 +33,7 @@ func init() {
 	contractCmd.Flags().String("address", "", "Contract address (required)")
 	contractCmd.Flags().String("platform", "", "Platform ID for aggregated mode (e.g. ethereum). See https://docs.coingecko.com/reference/asset-platforms-list")
 	contractCmd.Flags().String("network", "", "Network ID for onchain mode (e.g. eth). See https://docs.coingecko.com/reference/networks-list")
-	contractCmd.Flags().Bool("onchain", false, "Use DEX price from GeckoTerminal (paid plan required)")
+	contractCmd.Flags().Bool("onchain", false, "Use DEX price from GeckoTerminal")
 	contractCmd.Flags().String("vs", "usd", "Target currency")
 	contractCmd.Flags().String("export", "", "Export to CSV file path")
 	rootCmd.AddCommand(contractCmd)
@@ -83,21 +83,13 @@ func runContract(cmd *cobra.Command, args []string) error {
 				"include_24hr_vol":          "true",
 				"include_24hr_price_change": "true",
 			}
-			var notes []string
-			// Onchain endpoint is paid-only; always show pro-tier request in dry-run.
-			dryCfg := cfg
-			if !cfg.IsPaid() {
-				paidCfg := *cfg
-				paidCfg.Tier = "paid"
-				dryCfg = &paidCfg
-				notes = append(notes, "Paid plan required for --onchain")
-			}
+			note := ""
 			if vs != "usd" {
-				notes = append(notes, fmt.Sprintf("Additional request: GET /exchange_rates (currency conversion from USD to %s)", vs))
+				note = fmt.Sprintf("Additional request: GET /exchange_rates (currency conversion from USD to %s)", vs)
 			}
-			return printDryRunFull(dryCfg, "contract", "--onchain",
+			return printDryRunFull(cfg, "contract", "--onchain",
 				fmt.Sprintf("/onchain/simple/networks/%s/token_price/%s", url.PathEscape(network), address),
-				params, nil, strings.Join(notes, "; "))
+				params, nil, note)
 		}
 		params := map[string]string{
 			"contract_addresses":  address,

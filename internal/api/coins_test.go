@@ -596,15 +596,17 @@ func TestOnchainSimpleTokenPrice_Success(t *testing.T) {
 	assert.Equal(t, "3.387", result.Data.Attributes.H24PriceChangePct["0xaddr"])
 }
 
-func TestOnchainSimpleTokenPrice_RequiresPaid(t *testing.T) {
+func TestOnchainSimpleTokenPrice_DemoTier(t *testing.T) {
 	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
-		t.Fatal("should not reach the server with a demo client")
+		assert.Contains(t, r.URL.Path, "/onchain/simple/networks/eth/token_price/0xaddr")
+		resp := `{"data":{"id":"1","type":"simple_token_price","attributes":{"token_prices":{"0xaddr":"100.5"},"market_cap_usd":{},"h24_volume_usd":{},"h24_price_change_percentage":{}}}}`
+		_, _ = w.Write([]byte(resp))
 	})
 	defer srv.Close()
 
-	_, err := c.OnchainSimpleTokenPrice(context.Background(), "eth", []string{"0xaddr"})
-	require.Error(t, err)
-	assert.ErrorIs(t, err, ErrPlanRestricted)
+	result, err := c.OnchainSimpleTokenPrice(context.Background(), "eth", []string{"0xaddr"})
+	require.NoError(t, err)
+	assert.Equal(t, "100.5", result.Data.Attributes.TokenPrices["0xaddr"])
 }
 
 // ---------------------------------------------------------------------------

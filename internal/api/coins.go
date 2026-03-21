@@ -208,12 +208,11 @@ func (c *Client) SimpleTokenPrice(ctx context.Context, platform string, addresse
 	return result, err
 }
 
-// OnchainSimpleTokenPrice fetches DEX prices for tokens by contract address on a given network (paid plans only).
-// https://docs.coingecko.com/reference/onchain-simple-price
+// OnchainSimpleTokenPrice fetches DEX prices for tokens by contract address on a given network.
+// Available on both demo and paid plans (demo: api.coingecko.com, paid: pro-api.coingecko.com).
+// https://docs.coingecko.com/v3.0.1/reference/onchain-simple-price (demo)
+// https://docs.coingecko.com/reference/onchain-simple-price (pro)
 func (c *Client) OnchainSimpleTokenPrice(ctx context.Context, network string, addresses []string) (*OnchainTokenPriceResponse, error) {
-	if err := c.requirePaid(); err != nil {
-		return nil, err
-	}
 	params := url.Values{
 		"include_market_cap":        {"true"},
 		"include_24hr_vol":          {"true"},
