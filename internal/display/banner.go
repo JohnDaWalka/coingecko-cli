@@ -67,7 +67,6 @@ func PrintWelcomeBox() {
 	printCmdRow(w, "cg top-gainers-losers", "# Top gainers (paid)")
 	printCmdRow(w, "cg watch --ids bitcoin", "# Live prices (paid)")
 	printCmdRow(w, "cg tui markets", "# Interactive TUI")
-	printCmdRow(w, "cg commands", "# Machine-readable catalog (JSON)")
 	_, _ = fmt.Fprintln(w, blank)
 	_, _ = fmt.Fprintln(w, sep)
 	_, _ = fmt.Fprintln(w, blank)

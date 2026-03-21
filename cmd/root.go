@@ -32,9 +32,6 @@ func init() {
 func Execute() {
 	rootCmd.SilenceUsage = true
 	rootCmd.SilenceErrors = true
-	rootCmd.SetUsageTemplate(rootCmd.UsageTemplate() +
-		"\nUse \"cg commands\" for machine-readable command catalog (JSON)\n")
-
 	if err := rootCmd.Execute(); err != nil {
 		// Emit structured JSON error to stderr when -o json, otherwise plain text.
 		cmd, _, _ := rootCmd.Find(os.Args[1:])

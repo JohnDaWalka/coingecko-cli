@@ -148,10 +148,9 @@ type commandCatalog struct {
 }
 
 var commandsCmd = &cobra.Command{
-	Use:    "commands",
-	Short:  "Output machine-readable command catalog (JSON)",
-	Hidden: true,
-	RunE:   runCommands,
+	Use:   "commands",
+	Short: "Output machine-readable command catalog (JSON)",
+	RunE:  runCommands,
 }
 
 func init() {
