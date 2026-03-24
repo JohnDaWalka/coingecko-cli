@@ -75,7 +75,6 @@ func runContract(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Dry-run path.
 	if isDryRun(cmd) {
 		if onchain {
 			params := map[string]string{
@@ -105,12 +104,9 @@ func runContract(cmd *cobra.Command, args []string) error {
 	client := newAPIClient(cfg)
 	ctx := cmd.Context()
 
-	// Shared output variables.
 	var price, marketCap, volume, change float64
-	var displayAddr string
 
 	if onchain {
-		// Onchain path.
 		resp, err := client.OnchainSimpleTokenPrice(ctx, network, []string{address})
 		if err != nil {
 			return err
@@ -120,7 +116,6 @@ func runContract(cmd *cobra.Command, args []string) error {
 		if !ok {
 			return fmt.Errorf("no data returned for address %s", address)
 		}
-		displayAddr = address
 
 		price, err = strconv.ParseFloat(priceStr, 64)
 		if err != nil {
@@ -155,7 +150,6 @@ func runContract(cmd *cobra.Command, args []string) error {
 			// 24h change % stays the same
 		}
 	} else {
-		// Aggregated path.
 		resp, err := client.SimpleTokenPrice(ctx, platform, []string{address}, vs)
 		if err != nil {
 			return err
@@ -165,7 +159,6 @@ func runContract(cmd *cobra.Command, args []string) error {
 		if !ok {
 			return fmt.Errorf("no data returned for address %s", address)
 		}
-		displayAddr = address
 
 		price = data[vs]
 		marketCap = data[vs+"_market_cap"]
@@ -175,7 +168,7 @@ func runContract(cmd *cobra.Command, args []string) error {
 
 	if jsonOut {
 		normalized := map[string]interface{}{
-			displayAddr: map[string]interface{}{
+			address: map[string]interface{}{
 				"price":      price,
 				"market_cap": marketCap,
 				"volume_24h": volume,
@@ -185,11 +178,10 @@ func runContract(cmd *cobra.Command, args []string) error {
 		return printJSONRaw(normalized)
 	}
 
-	// Table output.
 	headers := []string{"Address", "Price", "Market Cap", "24h Volume", "24h Change"}
 	rows := [][]string{
 		{
-			display.SanitizeCell(displayAddr),
+			display.SanitizeCell(address),
 			display.FormatPrice(price, vs),
 			display.FormatLargeNumber(marketCap, vs),
 			display.FormatLargeNumber(volume, vs),
@@ -201,7 +193,7 @@ func runContract(cmd *cobra.Command, args []string) error {
 	if exportPath != "" {
 		csvRows := [][]string{
 			{
-				display.SanitizeCell(displayAddr),
+				display.SanitizeCell(address),
 				fmt.Sprintf("%.8f", price),
 				fmt.Sprintf("%.2f", marketCap),
 				fmt.Sprintf("%.2f", volume),
