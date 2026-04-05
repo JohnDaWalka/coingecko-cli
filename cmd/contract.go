@@ -32,6 +32,7 @@ identifiers from different API specs — they are not interchangeable.`,
 	Example: `  cg contract --address 0x1f98...                        # smart routing
   cg contract --address 0x1f98... --platform ethereum    # explicit CG aggregated
   cg contract --address 0x1f98... --platform ethereum --vs eur
+  cg contract --address 0x1f98... --platform ethereum --vs usd,eur,sgd
   cg contract --address 0x1f98... --onchain              # smart routing, onchain only
   cg contract --address 0x1f98... --network eth --onchain
   cg contract --address 0x1f98... --network eth --onchain --vs eur`,
@@ -43,7 +44,7 @@ func init() {
 	contractCmd.Flags().String("platform", "", "Platform ID for aggregated mode (e.g. ethereum). See https://docs.coingecko.com/reference/asset-platforms-list")
 	contractCmd.Flags().String("network", "", "Network ID for onchain mode (e.g. eth). See https://docs.coingecko.com/reference/networks-list")
 	contractCmd.Flags().Bool("onchain", false, "Use DEX price from GeckoTerminal")
-	contractCmd.Flags().String("vs", "usd", "Target currency")
+	contractCmd.Flags().String("vs", "usd", "Target currency (comma-separated for multiple, e.g. usd,eur,sgd)")
 	contractCmd.Flags().String("export", "", "Export to CSV file path")
 	rootCmd.AddCommand(contractCmd)
 }
@@ -51,6 +52,16 @@ func init() {
 type resolvedAddress struct {
 	network  string // onchain network ID (e.g. "eth")
 	platform string // CG asset platform ID (e.g. "ethereum"), may be empty
+}
+
+// contractRow holds price data for one currency.
+type contractRow struct {
+	currency  string
+	price     float64
+	marketCap float64
+	volume    float64
+	change    float64
+	reserve   float64
 }
 
 // resolveAddress searches onchain pools to find which network a contract address
@@ -121,8 +132,11 @@ func runContract(cmd *cobra.Command, args []string) error {
 	platform, _ := cmd.Flags().GetString("platform")
 	network, _ := cmd.Flags().GetString("network")
 	onchain, _ := cmd.Flags().GetBool("onchain")
-	vs, _ := cmd.Flags().GetString("vs")
-	vs = strings.ToLower(vs)
+	vsRaw, _ := cmd.Flags().GetString("vs")
+	currencies := splitTrim(strings.ToLower(vsRaw))
+	if len(currencies) == 0 {
+		currencies = []string{"usd"}
+	}
 	exportPath, _ := cmd.Flags().GetString("export")
 	jsonOut := outputJSON(cmd)
 
@@ -146,6 +160,9 @@ func runContract(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	// vs as comma-separated string for API params.
+	vs := strings.Join(currencies, ",")
 
 	if isDryRun(cmd) {
 		if needsResolve {
@@ -205,18 +222,24 @@ func runContract(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	var price, marketCap, volume, change, reserve float64
+	var rows []contractRow
 
+	// CG aggregated: API natively supports multiple vs_currencies.
 	if !onchain && platform != "" {
 		resp, err := client.SimpleTokenPrice(ctx, platform, []string{address}, vs)
 		if err != nil {
 			return err
 		}
 		if data, ok := resp[address]; ok {
-			price = data[vs]
-			marketCap = data[vs+"_market_cap"]
-			volume = data[vs+"_24h_vol"]
-			change = data[vs+"_24h_change"]
+			for _, cur := range currencies {
+				rows = append(rows, contractRow{
+					currency:  cur,
+					price:     data[cur],
+					marketCap: data[cur+"_market_cap"],
+					volume:    data[cur+"_24h_vol"],
+					change:    data[cur+"_24h_change"],
+				})
+			}
 		} else if network != "" {
 			warnf("No aggregated price found; falling back to onchain (network=%s)\n", network)
 			onchain = true
@@ -230,6 +253,7 @@ func runContract(cmd *cobra.Command, args []string) error {
 		onchain = true
 	}
 
+	// Onchain: USD only, convert to each requested currency via /exchange_rates.
 	if onchain {
 		resp, err := client.OnchainSimpleTokenPrice(ctx, network, []string{address})
 		if err != nil {
@@ -242,82 +266,153 @@ func runContract(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("no data returned for address %s", address)
 		}
 
-		price, err = strconv.ParseFloat(priceStr, 64)
+		priceUSD, err := strconv.ParseFloat(priceStr, 64)
 		if err != nil {
 			return fmt.Errorf("parsing price: %w", err)
 		}
 
-		if mcStr, ok := attrs.MarketCapUSD[address]; ok {
-			marketCap, _ = strconv.ParseFloat(mcStr, 64)
+		var mcapUSD, volUSD, changeUSD, reserveUSD float64
+		if v, ok := attrs.MarketCapUSD[address]; ok {
+			mcapUSD, _ = strconv.ParseFloat(v, 64)
 		}
-		if volStr, ok := attrs.H24VolumeUSD[address]; ok {
-			volume, _ = strconv.ParseFloat(volStr, 64)
+		if v, ok := attrs.H24VolumeUSD[address]; ok {
+			volUSD, _ = strconv.ParseFloat(v, 64)
 		}
-		if chgStr, ok := attrs.H24PriceChangePct[address]; ok {
-			change, _ = strconv.ParseFloat(chgStr, 64)
+		if v, ok := attrs.H24PriceChangePct[address]; ok {
+			changeUSD, _ = strconv.ParseFloat(v, 64)
 		}
-		if resStr, ok := attrs.TotalReserveInUSD[address]; ok {
-			reserve, _ = strconv.ParseFloat(resStr, 64)
+		if v, ok := attrs.TotalReserveInUSD[address]; ok {
+			reserveUSD, _ = strconv.ParseFloat(v, 64)
 		}
 
-		if vs != "usd" {
-			rates, err := client.ExchangeRates(ctx)
+		// Single /exchange_rates call covers all currencies.
+		needsConversion := len(currencies) > 1 || currencies[0] != "usd"
+		var rates *api.ExchangeRatesResponse
+		if needsConversion {
+			rates, err = client.ExchangeRates(ctx)
 			if err != nil {
 				return fmt.Errorf("fetching exchange rates: %w", err)
 			}
-			usdRate, usdOK := rates.Rates["usd"]
-			targetRate, targetOK := rates.Rates[vs]
-			if !usdOK || !targetOK {
-				return fmt.Errorf("unsupported currency %q", vs)
+		}
+
+		for _, cur := range currencies {
+			row := contractRow{
+				currency:  cur,
+				price:     priceUSD,
+				marketCap: mcapUSD,
+				volume:    volUSD,
+				change:    changeUSD,
+				reserve:   reserveUSD,
 			}
-			factor := targetRate.Value / usdRate.Value
-			price *= factor
-			marketCap *= factor
-			volume *= factor
-			reserve *= factor
-			// 24h change % stays the same
+			if cur != "usd" {
+				usdRate, usdOK := rates.Rates["usd"]
+				targetRate, targetOK := rates.Rates[cur]
+				if !usdOK || !targetOK {
+					return fmt.Errorf("unsupported currency %q", cur)
+				}
+				factor := targetRate.Value / usdRate.Value
+				row.price *= factor
+				row.marketCap *= factor
+				row.volume *= factor
+				row.reserve *= factor
+				// 24h change % stays the same
+			}
+			rows = append(rows, row)
 		}
 	}
 
 	if jsonOut {
-		data := map[string]interface{}{
-			"price":      price,
-			"market_cap": marketCap,
-			"volume_24h": volume,
-			"change_24h": change,
+		if len(currencies) == 1 {
+			// Single currency: flat output (backward compatible).
+			r := rows[0]
+			data := map[string]interface{}{
+				"price":      r.price,
+				"market_cap": r.marketCap,
+				"volume_24h": r.volume,
+				"change_24h": r.change,
+			}
+			if onchain {
+				data["total_reserve"] = r.reserve
+			}
+			return printJSONRaw(map[string]interface{}{address: data})
 		}
-		if onchain {
-			data["total_reserve"] = reserve
+		// Multiple currencies: nested by currency.
+		currencyData := make(map[string]interface{}, len(rows))
+		for _, r := range rows {
+			data := map[string]interface{}{
+				"price":      r.price,
+				"market_cap": r.marketCap,
+				"volume_24h": r.volume,
+				"change_24h": r.change,
+			}
+			if onchain {
+				data["total_reserve"] = r.reserve
+			}
+			currencyData[r.currency] = data
 		}
-		return printJSONRaw(map[string]interface{}{address: data})
+		return printJSONRaw(map[string]interface{}{address: currencyData})
 	}
 
-	headers := []string{"Address", "Price", "Market Cap", "24h Volume", "24h Change"}
-	row := []string{
-		display.SanitizeCell(address),
-		display.FormatPrice(price, vs),
-		display.FormatLargeNumber(marketCap, vs),
-		display.FormatLargeNumber(volume, vs),
-		display.ColorPercent(change),
-	}
+	headers := []string{"Address", "Currency", "Price", "Market Cap", "24h Volume", "24h Change"}
 	if onchain {
 		headers = append(headers, "Reserve")
-		row = append(row, display.FormatLargeNumber(reserve, vs))
 	}
-	display.PrintTable(headers, [][]string{row})
+	// Single currency: omit Currency column for cleaner output.
+	if len(currencies) == 1 {
+		headers = []string{"Address", "Price", "Market Cap", "24h Volume", "24h Change"}
+		if onchain {
+			headers = append(headers, "Reserve")
+		}
+	}
 
-	if exportPath != "" {
-		csvRow := []string{
-			display.SanitizeCell(address),
-			fmt.Sprintf("%.8f", price),
-			fmt.Sprintf("%.2f", marketCap),
-			fmt.Sprintf("%.2f", volume),
-			fmt.Sprintf("%.2f", change),
+	var tableRows [][]string
+	var csvRows [][]string
+	for _, r := range rows {
+		var tableRow, csvRow []string
+		if len(currencies) == 1 {
+			tableRow = []string{
+				display.SanitizeCell(address),
+				display.FormatPrice(r.price, r.currency),
+				display.FormatLargeNumber(r.marketCap, r.currency),
+				display.FormatLargeNumber(r.volume, r.currency),
+				display.ColorPercent(r.change),
+			}
+			csvRow = []string{
+				display.SanitizeCell(address),
+				fmt.Sprintf("%.8f", r.price),
+				fmt.Sprintf("%.2f", r.marketCap),
+				fmt.Sprintf("%.2f", r.volume),
+				fmt.Sprintf("%.2f", r.change),
+			}
+		} else {
+			tableRow = []string{
+				display.SanitizeCell(address),
+				strings.ToUpper(r.currency),
+				display.FormatPrice(r.price, r.currency),
+				display.FormatLargeNumber(r.marketCap, r.currency),
+				display.FormatLargeNumber(r.volume, r.currency),
+				display.ColorPercent(r.change),
+			}
+			csvRow = []string{
+				display.SanitizeCell(address),
+				strings.ToUpper(r.currency),
+				fmt.Sprintf("%.8f", r.price),
+				fmt.Sprintf("%.2f", r.marketCap),
+				fmt.Sprintf("%.2f", r.volume),
+				fmt.Sprintf("%.2f", r.change),
+			}
 		}
 		if onchain {
-			csvRow = append(csvRow, fmt.Sprintf("%.2f", reserve))
+			tableRow = append(tableRow, display.FormatLargeNumber(r.reserve, r.currency))
+			csvRow = append(csvRow, fmt.Sprintf("%.2f", r.reserve))
 		}
-		if err := exportCSV(exportPath, headers, [][]string{csvRow}); err != nil {
+		tableRows = append(tableRows, tableRow)
+		csvRows = append(csvRows, csvRow)
+	}
+	display.PrintTable(headers, tableRows)
+
+	if exportPath != "" {
+		if err := exportCSV(exportPath, headers, csvRows); err != nil {
 			return err
 		}
 	}
