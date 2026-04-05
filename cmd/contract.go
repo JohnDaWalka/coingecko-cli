@@ -205,9 +205,6 @@ func runContract(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Normalize for case-insensitive API response key matching.
-	addressLower := strings.ToLower(address)
-
 	var price, marketCap, volume, change, reserve float64
 
 	if !onchain && platform != "" {
@@ -215,7 +212,12 @@ func runContract(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		if data, ok := resp[addressLower]; ok {
+		// Try original case first (Solana is case-sensitive), then lowercase (Ethereum).
+		data, ok := resp[address]
+		if !ok {
+			data, ok = resp[strings.ToLower(address)]
+		}
+		if ok {
 			price = data[vs]
 			marketCap = data[vs+"_market_cap"]
 			volume = data[vs+"_24h_vol"]
@@ -239,7 +241,14 @@ func runContract(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		priceStr, ok := resp.Data.Attributes.TokenPrices[addressLower]
+		// Try original case first (Solana is case-sensitive), then lowercase (Ethereum).
+		attrs := resp.Data.Attributes
+		addrKey := address
+		if _, ok := attrs.TokenPrices[addrKey]; !ok {
+			addrKey = strings.ToLower(address)
+		}
+
+		priceStr, ok := attrs.TokenPrices[addrKey]
 		if !ok {
 			return fmt.Errorf("no data returned for address %s", address)
 		}
@@ -249,16 +258,16 @@ func runContract(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("parsing price: %w", err)
 		}
 
-		if mcStr, ok := resp.Data.Attributes.MarketCapUSD[addressLower]; ok {
+		if mcStr, ok := attrs.MarketCapUSD[addrKey]; ok {
 			marketCap, _ = strconv.ParseFloat(mcStr, 64)
 		}
-		if volStr, ok := resp.Data.Attributes.H24VolumeUSD[addressLower]; ok {
+		if volStr, ok := attrs.H24VolumeUSD[addrKey]; ok {
 			volume, _ = strconv.ParseFloat(volStr, 64)
 		}
-		if chgStr, ok := resp.Data.Attributes.H24PriceChangePct[addressLower]; ok {
+		if chgStr, ok := attrs.H24PriceChangePct[addrKey]; ok {
 			change, _ = strconv.ParseFloat(chgStr, 64)
 		}
-		if resStr, ok := resp.Data.Attributes.TotalReserveInUSD[addressLower]; ok {
+		if resStr, ok := attrs.TotalReserveInUSD[addrKey]; ok {
 			reserve, _ = strconv.ParseFloat(resStr, 64)
 		}
 
