@@ -758,10 +758,10 @@ func TestContract_SmartRoute_EmptyNetworkID(t *testing.T) {
 
 func TestContract_SmartRoute_NetworksAPIError(t *testing.T) {
 	srv := newTestServer(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.URL.Path == "/onchain/search/pools":
+		switch r.URL.Path {
+		case "/onchain/search/pools":
 			_ = json.NewEncoder(w).Encode(poolSearchJSON("eth", "0xabc"))
-		case r.URL.Path == "/onchain/networks":
+		case "/onchain/networks":
 			w.WriteHeader(500)
 			_, _ = w.Write([]byte(`{"status":{"error_code":500,"error_message":"Internal error"}}`))
 		default:
