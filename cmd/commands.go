@@ -83,10 +83,12 @@ var commandMeta = map[string]commandAnnotation{
 		APIEndpoints: map[string]string{
 			"default":   "/simple/token_price/{platform}",
 			"--onchain": "/onchain/simple/networks/{network}/token_price/{addresses}",
+			"resolve":   "/onchain/search/pools + /onchain/networks",
 		},
 		OASOperationIDs: map[string]string{
 			"default":   "simple-token-price",
 			"--onchain": "onchain-simple-price",
+			"resolve":   "search-pools",
 		},
 		OASSpec:      "coingecko-demo.json",
 		RequiresAuth: true,

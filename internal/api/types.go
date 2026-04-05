@@ -171,10 +171,11 @@ type OnchainTokenPriceResponse struct {
 		ID         string `json:"id"`
 		Type       string `json:"type"`
 		Attributes struct {
-			TokenPrices       map[string]string `json:"token_prices"`
-			MarketCapUSD      map[string]string `json:"market_cap_usd"`
-			H24VolumeUSD      map[string]string `json:"h24_volume_usd"`
-			H24PriceChangePct map[string]string `json:"h24_price_change_percentage"`
+			TokenPrices        map[string]string `json:"token_prices"`
+			MarketCapUSD       map[string]string `json:"market_cap_usd"`
+			H24VolumeUSD       map[string]string `json:"h24_volume_usd"`
+			H24PriceChangePct  map[string]string `json:"h24_price_change_percentage"`
+			TotalReserveInUSD  map[string]string `json:"total_reserve_in_usd"`
 		} `json:"attributes"`
 	} `json:"data"`
 }
@@ -191,6 +192,46 @@ type ExchangeRate struct {
 	Unit  string  `json:"unit"`
 	Value float64 `json:"value"`
 	Type  string  `json:"type"`
+}
+
+// OnchainSearchPoolsResponse is the response from /onchain/search/pools.
+// Used for smart routing: resolving a contract address to its network.
+// https://docs.coingecko.com/reference/search-pools
+type OnchainSearchPoolsResponse struct {
+	Data []OnchainPool `json:"data"`
+}
+
+type OnchainPool struct {
+	ID            string                `json:"id"`
+	Type          string                `json:"type"`
+	Relationships OnchainPoolRelations  `json:"relationships"`
+}
+
+type OnchainPoolRelations struct {
+	BaseToken  OnchainRelRef `json:"base_token"`
+	QuoteToken OnchainRelRef `json:"quote_token"`
+}
+
+type OnchainRelRef struct {
+	Data struct {
+		ID   string `json:"id"`
+		Type string `json:"type"`
+	} `json:"data"`
+}
+
+// OnchainNetworksResponse is the response from /onchain/networks.
+// https://docs.coingecko.com/reference/networks-list
+type OnchainNetworksResponse struct {
+	Data []OnchainNetwork `json:"data"`
+}
+
+type OnchainNetwork struct {
+	ID         string `json:"id"`
+	Type       string `json:"type"`
+	Attributes struct {
+		Name                     string `json:"name"`
+		CoingeckoAssetPlatformID string `json:"coingecko_asset_platform_id"`
+	} `json:"attributes"`
 }
 
 type CoinDetail struct {

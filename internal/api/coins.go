@@ -214,13 +214,33 @@ func (c *Client) SimpleTokenPrice(ctx context.Context, platform string, addresse
 // https://docs.coingecko.com/reference/onchain-simple-price (pro)
 func (c *Client) OnchainSimpleTokenPrice(ctx context.Context, network string, addresses []string) (*OnchainTokenPriceResponse, error) {
 	params := url.Values{
-		"include_market_cap":        {"true"},
-		"include_24hr_vol":          {"true"},
-		"include_24hr_price_change": {"true"},
+		"include_market_cap":           {"true"},
+		"include_24hr_vol":             {"true"},
+		"include_24hr_price_change":    {"true"},
+		"mcap_fdv_fallback":            {"true"},
+		"include_total_reserve_in_usd": {"true"},
 	}
 	var result OnchainTokenPriceResponse
 	err := c.get(ctx, fmt.Sprintf("/onchain/simple/networks/%s/token_price/%s?%s",
 		url.PathEscape(network), strings.Join(addresses, ","), params.Encode()), &result)
+	return &result, err
+}
+
+// OnchainSearchPools searches for pools by token address across all networks.
+// Used for smart routing: resolving a contract address to its network.
+// https://docs.coingecko.com/reference/search-pools
+func (c *Client) OnchainSearchPools(ctx context.Context, query string) (*OnchainSearchPoolsResponse, error) {
+	params := url.Values{"query": {query}}
+	var result OnchainSearchPoolsResponse
+	err := c.get(ctx, "/onchain/search/pools?"+params.Encode(), &result)
+	return &result, err
+}
+
+// OnchainNetworks fetches all onchain networks with their CoinGecko asset platform mappings.
+// https://docs.coingecko.com/reference/networks-list
+func (c *Client) OnchainNetworks(ctx context.Context) (*OnchainNetworksResponse, error) {
+	var result OnchainNetworksResponse
+	err := c.get(ctx, "/onchain/networks", &result)
 	return &result, err
 }
 

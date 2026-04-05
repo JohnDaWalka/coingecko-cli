@@ -571,6 +571,8 @@ func TestOnchainSimpleTokenPrice_Success(t *testing.T) {
 		assert.Equal(t, "true", q.Get("include_market_cap"))
 		assert.Equal(t, "true", q.Get("include_24hr_vol"))
 		assert.Equal(t, "true", q.Get("include_24hr_price_change"))
+		assert.Equal(t, "true", q.Get("mcap_fdv_fallback"))
+		assert.Equal(t, "true", q.Get("include_total_reserve_in_usd"))
 
 		w.WriteHeader(200)
 		_, _ = w.Write([]byte(`{
@@ -581,7 +583,8 @@ func TestOnchainSimpleTokenPrice_Success(t *testing.T) {
 					"token_prices": {"0xaddr": "2289.33"},
 					"market_cap_usd": {"0xaddr": "6692452895.779648"},
 					"h24_volume_usd": {"0xaddr": "965988358.733808"},
-					"h24_price_change_percentage": {"0xaddr": "3.387"}
+					"h24_price_change_percentage": {"0xaddr": "3.387"},
+					"total_reserve_in_usd": {"0xaddr": "12345678.90"}
 				}
 			}
 		}`))
@@ -594,6 +597,7 @@ func TestOnchainSimpleTokenPrice_Success(t *testing.T) {
 	assert.Equal(t, "6692452895.779648", result.Data.Attributes.MarketCapUSD["0xaddr"])
 	assert.Equal(t, "965988358.733808", result.Data.Attributes.H24VolumeUSD["0xaddr"])
 	assert.Equal(t, "3.387", result.Data.Attributes.H24PriceChangePct["0xaddr"])
+	assert.Equal(t, "12345678.90", result.Data.Attributes.TotalReserveInUSD["0xaddr"])
 }
 
 func TestOnchainSimpleTokenPrice_DemoTier(t *testing.T) {
@@ -636,6 +640,89 @@ func TestExchangeRates_Success(t *testing.T) {
 	assert.Equal(t, "$", result.Rates["usd"].Unit)
 	assert.Equal(t, "fiat", result.Rates["usd"].Type)
 	assert.Equal(t, float64(62345), result.Rates["eur"].Value)
+}
+
+// ---------------------------------------------------------------------------
+// OnchainSearchPools
+// ---------------------------------------------------------------------------
+
+func TestOnchainSearchPools_Success(t *testing.T) {
+	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/onchain/search/pools", r.URL.Path)
+		assert.Equal(t, "0xaddr", r.URL.Query().Get("query"))
+
+		_, _ = w.Write([]byte(`{
+			"data": [{
+				"id": "eth_0xpool1",
+				"type": "pool",
+				"relationships": {
+					"base_token": {
+						"data": {"id": "eth_0xaddr", "type": "token"}
+					},
+					"quote_token": {
+						"data": {"id": "eth_0xquote", "type": "token"}
+					}
+				}
+			}]
+		}`))
+	})
+	defer srv.Close()
+
+	result, err := c.OnchainSearchPools(context.Background(), "0xaddr")
+	require.NoError(t, err)
+	require.Len(t, result.Data, 1)
+	assert.Equal(t, "eth_0xaddr", result.Data[0].Relationships.BaseToken.Data.ID)
+}
+
+func TestOnchainSearchPools_NoResults(t *testing.T) {
+	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"data": []}`))
+	})
+	defer srv.Close()
+
+	result, err := c.OnchainSearchPools(context.Background(), "0xnonexistent")
+	require.NoError(t, err)
+	assert.Empty(t, result.Data)
+}
+
+// ---------------------------------------------------------------------------
+// OnchainNetworks
+// ---------------------------------------------------------------------------
+
+func TestOnchainNetworks_Success(t *testing.T) {
+	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/onchain/networks", r.URL.Path)
+
+		_, _ = w.Write([]byte(`{
+			"data": [
+				{
+					"id": "eth",
+					"type": "network",
+					"attributes": {
+						"name": "Ethereum",
+						"coingecko_asset_platform_id": "ethereum"
+					}
+				},
+				{
+					"id": "bsc",
+					"type": "network",
+					"attributes": {
+						"name": "BNB Chain",
+						"coingecko_asset_platform_id": "binance-smart-chain"
+					}
+				}
+			]
+		}`))
+	})
+	defer srv.Close()
+
+	result, err := c.OnchainNetworks(context.Background())
+	require.NoError(t, err)
+	require.Len(t, result.Data, 2)
+	assert.Equal(t, "eth", result.Data[0].ID)
+	assert.Equal(t, "ethereum", result.Data[0].Attributes.CoingeckoAssetPlatformID)
+	assert.Equal(t, "bsc", result.Data[1].ID)
+	assert.Equal(t, "binance-smart-chain", result.Data[1].Attributes.CoingeckoAssetPlatformID)
 }
 
 // ---------------------------------------------------------------------------
