@@ -212,12 +212,7 @@ func runContract(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		// Try original case first (Solana is case-sensitive), then lowercase (Ethereum).
-		data, ok := resp[address]
-		if !ok {
-			data, ok = resp[strings.ToLower(address)]
-		}
-		if ok {
+		if data, ok := resp[address]; ok {
 			price = data[vs]
 			marketCap = data[vs+"_market_cap"]
 			volume = data[vs+"_24h_vol"]
@@ -241,14 +236,8 @@ func runContract(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		// Try original case first (Solana is case-sensitive), then lowercase (Ethereum).
 		attrs := resp.Data.Attributes
-		addrKey := address
-		if _, ok := attrs.TokenPrices[addrKey]; !ok {
-			addrKey = strings.ToLower(address)
-		}
-
-		priceStr, ok := attrs.TokenPrices[addrKey]
+		priceStr, ok := attrs.TokenPrices[address]
 		if !ok {
 			return fmt.Errorf("no data returned for address %s", address)
 		}
@@ -258,16 +247,16 @@ func runContract(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("parsing price: %w", err)
 		}
 
-		if mcStr, ok := attrs.MarketCapUSD[addrKey]; ok {
+		if mcStr, ok := attrs.MarketCapUSD[address]; ok {
 			marketCap, _ = strconv.ParseFloat(mcStr, 64)
 		}
-		if volStr, ok := attrs.H24VolumeUSD[addrKey]; ok {
+		if volStr, ok := attrs.H24VolumeUSD[address]; ok {
 			volume, _ = strconv.ParseFloat(volStr, 64)
 		}
-		if chgStr, ok := attrs.H24PriceChangePct[addrKey]; ok {
+		if chgStr, ok := attrs.H24PriceChangePct[address]; ok {
 			change, _ = strconv.ParseFloat(chgStr, 64)
 		}
-		if resStr, ok := attrs.TotalReserveInUSD[addrKey]; ok {
+		if resStr, ok := attrs.TotalReserveInUSD[address]; ok {
 			reserve, _ = strconv.ParseFloat(resStr, 64)
 		}
 
