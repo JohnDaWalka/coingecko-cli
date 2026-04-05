@@ -18,9 +18,8 @@ type commandAnnotation struct {
 	OASSpec         string
 	OASSpecs        map[string]string // Per-mode OAS spec overrides (e.g. "--onchain" → "coingecko-pro.json")
 	Transport       string            // "rest" (default) or "websocket"
-	PaidOnly        bool
-	PaidModes       map[string]bool // Per-mode paid-only flags (e.g. "--onchain" → true)
-	RequiresAuth    bool
+	PaidOnly     bool
+	RequiresAuth bool
 }
 
 var commandMeta = map[string]commandAnnotation{
@@ -149,8 +148,7 @@ type commandInfo struct {
 	Examples        []string          `json:"examples,omitempty"`
 	OutputFormats   []string          `json:"output_formats"`
 	RequiresAuth    bool              `json:"requires_auth"`
-	PaidOnly        bool              `json:"paid_only"`
-	PaidModes       map[string]bool   `json:"paid_modes,omitempty"`
+	PaidOnly bool `json:"paid_only"`
 	Transport       string            `json:"transport,omitempty"`
 	APIEndpoint     string            `json:"api_endpoint,omitempty"`
 	APIEndpoints    map[string]string `json:"api_endpoints,omitempty"`
@@ -233,7 +231,6 @@ func runCommands(cmd *cobra.Command, args []string) error {
 
 		if meta, ok := commandMeta[c.Name()]; ok {
 			info.PaidOnly = meta.PaidOnly
-			info.PaidModes = meta.PaidModes
 			info.RequiresAuth = meta.RequiresAuth
 			info.Transport = meta.Transport
 			info.APIEndpoint = meta.APIEndpoint

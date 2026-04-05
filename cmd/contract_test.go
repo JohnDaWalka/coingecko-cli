@@ -374,7 +374,6 @@ func TestContract_CatalogMetadata(t *testing.T) {
 
 	// Not paid-only — onchain endpoint is available on both demo and paid tiers.
 	assert.False(t, contractInfo.PaidOnly)
-	assert.Empty(t, contractInfo.PaidModes)
 
 	// All operation IDs should be present.
 	assert.Equal(t, "simple-token-price", contractInfo.OASOperationIDs["default"])
