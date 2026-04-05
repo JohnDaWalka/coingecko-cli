@@ -16,8 +16,7 @@ type commandAnnotation struct {
 	OASOperationID  string
 	OASOperationIDs map[string]string
 	OASSpec         string
-	OASSpecs        map[string]string // Per-mode OAS spec overrides (e.g. "--onchain" → "coingecko-pro.json")
-	Transport       string            // "rest" (default) or "websocket"
+	Transport string // "rest" (default) or "websocket"
 	PaidOnly     bool
 	RequiresAuth bool
 }
@@ -154,8 +153,7 @@ type commandInfo struct {
 	APIEndpoints    map[string]string `json:"api_endpoints,omitempty"`
 	OASOperationID  string            `json:"oas_operation_id,omitempty"`
 	OASOperationIDs map[string]string `json:"oas_operation_ids,omitempty"`
-	OASSpec         string            `json:"oas_spec,omitempty"`
-	OASSpecs        map[string]string `json:"oas_specs,omitempty"`
+	OASSpec string `json:"oas_spec,omitempty"`
 }
 
 type commandCatalog struct {
@@ -238,7 +236,6 @@ func runCommands(cmd *cobra.Command, args []string) error {
 			info.OASOperationID = meta.OASOperationID
 			info.OASOperationIDs = meta.OASOperationIDs
 			info.OASSpec = meta.OASSpec
-			info.OASSpecs = meta.OASSpecs
 		}
 
 		catalog.Commands = append(catalog.Commands, info)
