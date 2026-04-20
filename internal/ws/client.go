@@ -134,7 +134,7 @@ func (c *Client) Close() error {
 
 // connect dials the WebSocket endpoint and waits for the welcome message.
 func (c *Client) connect(ctx context.Context) error {
-	url := c.wsURL + "?x_cg_pro_api_key=" + c.cfg.APIKey
+	url := c.wsURL + "?x_cg_pro_api_key=" + c.cfg.APIKey + "&source=cli"
 
 	header := http.Header{}
 	header.Set("User-Agent", c.UserAgent)

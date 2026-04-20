@@ -379,6 +379,42 @@ func TestConnect_APIKeyInQueryParam(t *testing.T) {
 	require.NoError(t, client.Close())
 }
 
+func TestConnect_SourceCLIQueryParam(t *testing.T) {
+	var receivedSource string
+	var mu sync.Mutex
+
+	srv := newTestWSServer(t, func(conn *websocket.Conn) {
+		happyHandshake(t, conn)
+		for {
+			if _, _, err := conn.ReadMessage(); err != nil {
+				return
+			}
+		}
+	})
+	origHandler := srv.Config.Handler
+	srv.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		receivedSource = r.URL.Query().Get("source")
+		mu.Unlock()
+		origHandler.ServeHTTP(w, r)
+	})
+
+	client := NewClient(paidCfg(), []string{"bitcoin"})
+	client.SetURL(wsURL(srv))
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := client.Connect(ctx)
+	require.NoError(t, err)
+
+	mu.Lock()
+	assert.Equal(t, "cli", receivedSource)
+	mu.Unlock()
+
+	require.NoError(t, client.Close())
+}
+
 func TestConnect_UserAgentHeader(t *testing.T) {
 	var gotUA string
 	var mu sync.Mutex
