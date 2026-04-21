@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"unicode/utf8"
 
 	"golang.org/x/term"
 )
@@ -44,14 +45,19 @@ func PrintLogo() {
 }
 
 // PrintWelcomeBox prints a bordered quick-start box to stderr.
-func PrintWelcomeBox() {
+// version is the embedded build version (e.g. "v1.2.3") shown in the header.
+func PrintWelcomeBox(version string) {
 	w := os.Stderr
 	top := "+" + strings.Repeat("-", boxWidth) + "+"
 	blank := "|" + strings.Repeat(" ", boxWidth) + "|"
 	sep := boxRow(w, dimColor+strings.Repeat("-", boxWidth-2)+colorReset, boxWidth-2)
 
+	// "◆ CoinGecko CLI " is 16 runes; version length varies.
+	versionVisible := 16 + utf8.RuneCountInString(version)
+
 	_, _ = fmt.Fprintln(w, top)
 	_, _ = fmt.Fprintln(w, blank)
+	printColoredRow(w, brandGreen+"◆ CoinGecko CLI "+colorReset+version, versionVisible)
 	printColoredRow(w, yellowBold+"Official API Command Line Interface"+colorReset, 35)
 	_, _ = fmt.Fprintln(w, blank)
 	_, _ = fmt.Fprintln(w, sep)
@@ -91,7 +97,7 @@ func printColoredRow(w *os.File, content string, visible int) {
 	}
 	if !ColorEnabled() {
 		plain := ansiRegex.ReplaceAllString(content, "")
-		plainPad := boxWidth - 2 - len(plain)
+		plainPad := boxWidth - 2 - utf8.RuneCountInString(plain)
 		if plainPad < 0 {
 			plainPad = 0
 		}
@@ -129,6 +135,16 @@ func boxRow(w *os.File, content string, visible int) string {
 		pad = 0
 	}
 	return fmt.Sprintf("| %s%s |", content, strings.Repeat(" ", pad))
+}
+
+// PrintUpdateReminder writes a one-liner update notice to stderr.
+func PrintUpdateReminder(current, latest string) {
+	if ColorEnabled() {
+		fmt.Fprintf(os.Stderr, "  %sUpdate available:%s %s → v%s. Run %scg update%s to upgrade.\n\n",
+			yellowBold, colorReset, current, latest, yellowBold, colorReset)
+	} else {
+		fmt.Fprintf(os.Stderr, "  Update available: %s → v%s. Run `cg update` to upgrade.\n\n", current, latest)
+	}
 }
 
 // BannerLines is the number of terminal rows FprintBanner occupies
