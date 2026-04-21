@@ -333,6 +333,21 @@ cg watch --ids bitcoin --dry-run         # Show WebSocket request info
 
 ---
 
+### `cg update` — Upgrade the CLI
+
+Check for a new version and upgrade in one step. Auto-detects whether you installed via Homebrew, `go install`, or the install script, and hands off to the right tool.
+
+```sh
+cg update
+
+# Override install method if auto-detection gets it wrong
+cg update --method homebrew   # or: go, script
+```
+
+The CLI also checks for updates on launch (cached 24h) and shows a reminder if you're behind. Set `CG_NO_UPDATE_CHECK=1` to disable this in CI.
+
+---
+
 ## Category Filtering
 
 CoinGecko tracks 500+ categories including Real World Assets, commodities, and tokenized stocks. Use the `--category` flag to filter:
@@ -422,6 +437,7 @@ Commands:
   top-gainers-losers   Show top gaining and losing coins (paid plans only)
   watch                Stream live coin prices via WebSocket (analyst or above)
   tui                  Interactive terminal UI (markets, trending)
+  update               Upgrade the CLI to the latest version
   commands             List all commands with API metadata (for agents/LLMs)
   help                 Print help for a command
 
