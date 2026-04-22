@@ -156,6 +156,6 @@ func VersionGreater(a, b string) bool {
 
 func parseSemver(v string) [3]int {
 	var p [3]int
-	fmt.Sscanf(v, "%d.%d.%d", &p[0], &p[1], &p[2])
+	_, _ = fmt.Sscanf(v, "%d.%d.%d", &p[0], &p[1], &p[2])
 	return p
 }
