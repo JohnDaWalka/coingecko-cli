@@ -15,6 +15,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var fetchLatestFunc = updater.FetchLatest
+
 var updateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Upgrade the CLI to the latest version",
@@ -41,7 +43,7 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 	}
 
 	warnf("Checking for updates...\n")
-	latest, err := updater.FetchLatest()
+	latest, err := fetchLatestFunc()
 	if err != nil {
 		return fmt.Errorf("checking for updates: %w", err)
 	}
@@ -54,8 +56,12 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 		warnf("Already up to date (%s).\n", version)
 		return nil
 	}
+	if updater.VersionGreater(currentVer, latest) {
+		warnf("Current version (v%s) is ahead of the latest release (v%s).\n", currentVer, latest)
+		return nil
+	}
 
-	warnf("Current: v%s  →  Latest: v%s  (install via: %s)\n\n", version, latest, method)
+	warnf("Current: v%s  →  Latest: v%s  (install via: %s)\n\n", currentVer, latest, method)
 
 	var confirmed bool
 	if err := huh.NewConfirm().

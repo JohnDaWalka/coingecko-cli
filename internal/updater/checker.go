@@ -11,9 +11,11 @@ import (
 	"time"
 )
 
-const (
+const cacheTTL = 24 * time.Hour
+
+var (
 	githubReleasesURL = "https://api.github.com/repos/coingecko/coingecko-cli/releases/latest"
-	cacheTTL          = 24 * time.Hour
+	userConfigDirFunc = os.UserConfigDir
 )
 
 // Info holds the result of an update check.
@@ -50,7 +52,7 @@ func Check(currentVersion string) *Info {
 	return &Info{
 		CurrentVersion:  currentVersion,
 		LatestVersion:   latest,
-		UpdateAvailable: latest != strings.TrimPrefix(currentVersion, "v"),
+		UpdateAvailable: VersionGreater(latest, strings.TrimPrefix(currentVersion, "v")),
 	}
 }
 
@@ -97,7 +99,7 @@ func fetchLatest(ctx context.Context) (string, error) {
 }
 
 func cacheFilePath() (string, error) {
-	dir, err := os.UserConfigDir()
+	dir, err := userConfigDirFunc()
 	if err != nil {
 		return "", err
 	}
@@ -138,4 +140,22 @@ func saveCache(latest string) {
 		return
 	}
 	_ = os.WriteFile(path, data, 0o600)
+}
+
+// VersionGreater reports whether bare semver a is strictly greater than b.
+// Both must be "MAJOR.MINOR.PATCH" without a leading v.
+func VersionGreater(a, b string) bool {
+	ap, bp := parseSemver(a), parseSemver(b)
+	for i := range 3 {
+		if ap[i] != bp[i] {
+			return ap[i] > bp[i]
+		}
+	}
+	return false
+}
+
+func parseSemver(v string) [3]int {
+	var p [3]int
+	fmt.Sscanf(v, "%d.%d.%d", &p[0], &p[1], &p[2])
+	return p
 }
