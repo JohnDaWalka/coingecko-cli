@@ -50,7 +50,7 @@ func Check(currentVersion string) *Info {
 	return &Info{
 		CurrentVersion:  currentVersion,
 		LatestVersion:   latest,
-		UpdateAvailable: latest != currentVersion,
+		UpdateAvailable: latest != strings.TrimPrefix(currentVersion, "v"),
 	}
 }
 

@@ -143,7 +143,7 @@ func PrintUpdateReminder(current, latest string) {
 		fmt.Fprintf(os.Stderr, "  %sUpdate available:%s %s → v%s. Run %scg update%s to upgrade.\n\n",
 			yellowBold, colorReset, current, latest, yellowBold, colorReset)
 	} else {
-		fmt.Fprintf(os.Stderr, "  Update available: %s → v%s. Run `cg update` to upgrade.\n\n", current, latest)
+		fmt.Fprintf(os.Stderr, "  Update available: v%s → v%s. Run `cg update` to upgrade.\n\n", current, latest)
 	}
 }
 

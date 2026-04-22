@@ -49,7 +49,8 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("unexpected version format from GitHub: %q", latest)
 	}
 
-	if latest == version {
+	currentVer := strings.TrimPrefix(version, "v")
+	if latest == currentVer {
 		warnf("Already up to date (%s).\n", version)
 		return nil
 	}
@@ -58,7 +59,7 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 
 	var confirmed bool
 	if err := huh.NewConfirm().
-		Title(fmt.Sprintf("Update cg v%s → v%s?", version, latest)).
+		Title(fmt.Sprintf("Update cg v%s → v%s?", currentVer, latest)).
 		Value(&confirmed).
 		Run(); err != nil {
 		if errors.Is(err, huh.ErrUserAborted) {
