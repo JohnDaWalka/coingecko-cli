@@ -356,6 +356,36 @@ func TestRetryAfterInvalidFallback(t *testing.T) {
 	assert.ErrorIs(t, err, ErrRateLimited)
 }
 
+func TestSourceCLIAppendedWithoutExistingQuery(t *testing.T) {
+	var gotSource string
+	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
+		gotSource = r.URL.Query().Get("source")
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte("{}"))
+	})
+	defer srv.Close()
+
+	var result map[string]any
+	_ = c.get(context.Background(), "/test", &result)
+	assert.Equal(t, "cli", gotSource)
+}
+
+func TestSourceCLIAppendedWithExistingQuery(t *testing.T) {
+	var gotSource, gotExisting string
+	c, srv := testClient(func(w http.ResponseWriter, r *http.Request) {
+		gotSource = r.URL.Query().Get("source")
+		gotExisting = r.URL.Query().Get("foo")
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte("{}"))
+	})
+	defer srv.Close()
+
+	var result map[string]any
+	_ = c.get(context.Background(), "/test?foo=bar", &result)
+	assert.Equal(t, "cli", gotSource)
+	assert.Equal(t, "bar", gotExisting)
+}
+
 func TestRequirePaid(t *testing.T) {
 	cfg := &config.Config{Tier: config.TierDemo}
 	c := NewClient(cfg)

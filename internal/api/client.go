@@ -200,6 +200,11 @@ func (c *Client) baseURL() string {
 
 func (c *Client) get(ctx context.Context, path string, result any) error {
 	url := c.baseURL() + path
+	if strings.Contains(path, "?") {
+		url += "&source=cli"
+	} else {
+		url += "?source=cli"
+	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
