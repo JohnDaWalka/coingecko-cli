@@ -60,6 +60,15 @@ func TestRunUpdate_InvalidVersionFromGitHub(t *testing.T) {
 	assert.Contains(t, err.Error(), "unexpected version format")
 }
 
+func TestRunUpdate_InvalidMethod(t *testing.T) {
+	require.NoError(t, updateCmd.Flags().Set("method", "invalid"))
+	t.Cleanup(func() { _ = updateCmd.Flags().Set("method", "") })
+
+	err := updateCmd.RunE(updateCmd, nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unknown install method")
+}
+
 func TestRunUpdate_FetchError(t *testing.T) {
 	orig := fetchLatestFunc
 	fetchLatestFunc = func() (string, error) { return "", fmt.Errorf("network timeout") }

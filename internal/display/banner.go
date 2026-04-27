@@ -139,8 +139,10 @@ func boxRow(w *os.File, content string, visible int) string {
 
 // PrintUpdateReminder writes a one-liner update notice to stderr.
 func PrintUpdateReminder(current, latest string) {
+	current = strings.TrimPrefix(current, "v")
+	latest = strings.TrimPrefix(latest, "v")
 	if ColorEnabled() {
-		fmt.Fprintf(os.Stderr, "  %sUpdate available:%s %s → v%s. Run %scg update%s to upgrade.\n\n",
+		fmt.Fprintf(os.Stderr, "  %sUpdate available:%s v%s → v%s. Run %scg update%s to upgrade.\n\n",
 			yellowBold, colorReset, current, latest, yellowBold, colorReset)
 	} else {
 		fmt.Fprintf(os.Stderr, "  Update available: v%s → v%s. Run `cg update` to upgrade.\n\n", current, latest)
