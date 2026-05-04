@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/coingecko/coingecko-cli/internal/updater"
@@ -68,6 +70,77 @@ func TestRunUpdate_InvalidMethod(t *testing.T) {
 	err := updateCmd.RunE(updateCmd, nil)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unknown install method")
+}
+
+func TestClassifyInstallPath_Homebrew(t *testing.T) {
+	cases := []struct {
+		path string
+		desc string
+	}{
+		{"/usr/local/Cellar/cg/1.0.0/bin/cg", "Cellar path"},
+		{"/home/linuxbrew/.linuxbrew/homebrew/bin/cg", "homebrew path"},
+		{"/opt/homebrew/bin/cg", "opt/homebrew path"},
+	}
+	for _, tc := range cases {
+		assert.Equal(t, "homebrew", classifyInstallPath(tc.path), tc.desc)
+	}
+}
+
+func TestClassifyInstallPath_Go_ExplicitGOBIN(t *testing.T) {
+	gobin := t.TempDir()
+	t.Setenv("GOBIN", gobin)
+	t.Setenv("GOPATH", "")
+
+	exe := filepath.Join(gobin, "cg")
+	assert.Equal(t, "go", classifyInstallPath(exe))
+}
+
+func TestClassifyInstallPath_Go_DefaultGOPATH(t *testing.T) {
+	home, err := os.UserHomeDir()
+	require.NoError(t, err)
+
+	t.Setenv("GOBIN", "")
+	t.Setenv("GOPATH", "")
+
+	exe := filepath.Join(home, "go", "bin", "cg")
+	assert.Equal(t, "go", classifyInstallPath(exe))
+}
+
+func TestClassifyInstallPath_Go_ExplicitGOPATH(t *testing.T) {
+	gopath := t.TempDir()
+	t.Setenv("GOBIN", "")
+	t.Setenv("GOPATH", gopath)
+
+	exe := filepath.Join(gopath, "bin", "cg")
+	assert.Equal(t, "go", classifyInstallPath(exe))
+}
+
+func TestClassifyInstallPath_Script(t *testing.T) {
+	t.Setenv("GOBIN", "")
+	t.Setenv("GOPATH", "")
+
+	cases := []string{
+		"/usr/local/bin/cg",
+		"/home/user/.local/bin/cg",
+		"/tmp/cg",
+	}
+	for _, exe := range cases {
+		assert.Equal(t, "script", classifyInstallPath(exe), "path: %s", exe)
+	}
+}
+
+func TestClassifyInstallPath_GoBinNotParentDir(t *testing.T) {
+	gobin := "/home/user/go/bin"
+	t.Setenv("GOBIN", gobin)
+
+	// A path that starts with the gobin string but isn't under it (no separator)
+	exe := gobin + "extra/cg"
+	assert.Equal(t, "script", classifyInstallPath(exe))
+}
+
+func TestDetectInstallMethod_ReturnsValidMethod(t *testing.T) {
+	method := detectInstallMethod()
+	assert.Contains(t, []string{"homebrew", "go", "script"}, method)
 }
 
 func TestRunUpdate_FetchError(t *testing.T) {

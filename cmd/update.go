@@ -85,7 +85,12 @@ func detectInstallMethod() string {
 	if err != nil {
 		return "script"
 	}
+	return classifyInstallPath(exe)
+}
 
+// classifyInstallPath returns the install method ("homebrew", "go", or "script")
+// for a resolved executable path.
+func classifyInstallPath(exe string) string {
 	if strings.Contains(exe, "/Cellar/") ||
 		strings.Contains(exe, "/homebrew/") ||
 		strings.Contains(exe, "/opt/homebrew/") {
