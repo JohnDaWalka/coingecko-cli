@@ -7,11 +7,17 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 )
 
 const cacheTTL = 24 * time.Hour
+
+var semverRe = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+$`)
+
+// ValidVersion reports whether v is a bare MAJOR.MINOR.PATCH semver string.
+func ValidVersion(v string) bool { return semverRe.MatchString(v) }
 
 var (
 	githubReleasesURL = "https://api.github.com/repos/coingecko/coingecko-cli/releases/latest"
@@ -42,7 +48,7 @@ func Check(currentVersion string) *Info {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 		v, err := fetchLatest(ctx)
-		if err != nil || v == "" {
+		if err != nil || !ValidVersion(v) {
 			return nil
 		}
 		saveCache(v)
@@ -64,8 +70,8 @@ func FetchLatest() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if v == "" {
-		return "", fmt.Errorf("GitHub returned empty version tag")
+	if !ValidVersion(v) {
+		return "", fmt.Errorf("GitHub returned unexpected version tag: %q", v)
 	}
 	saveCache(v)
 	return v, nil

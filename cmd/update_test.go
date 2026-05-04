@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/coingecko/coingecko-cli/internal/updater"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -11,12 +12,12 @@ import (
 func TestValidVersion(t *testing.T) {
 	valid := []string{"1.2.3", "0.0.1", "10.20.30", "0.0.0"}
 	for _, v := range valid {
-		assert.True(t, validVersion(v), "expected valid: %s", v)
+		assert.True(t, updater.ValidVersion(v), "expected valid: %s", v)
 	}
 
-	invalid := []string{"v1.2.3", "1.2", "1.2.3.4", "1.2.x", "", "abc", "1.2."}
+	invalid := []string{"v1.2.3", "1.2", "1.2.3.4", "1.2.x", "", "abc", "1.2.", "1.2.3-rc1"}
 	for _, v := range invalid {
-		assert.False(t, validVersion(v), "expected invalid: %s", v)
+		assert.False(t, updater.ValidVersion(v), "expected invalid: %s", v)
 	}
 }
 
