@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"runtime"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -21,7 +22,7 @@ var versionCmd = &cobra.Command{
 				"arch":    runtime.GOARCH,
 			})
 		}
-		fmt.Printf("cg %s\n", version)
+		fmt.Printf("cg v%s\n", strings.TrimPrefix(version, "v"))
 		fmt.Printf("  commit: %s\n", commit)
 		fmt.Printf("  built:  %s\n", date)
 		fmt.Printf("  go:     %s\n", runtime.Version())

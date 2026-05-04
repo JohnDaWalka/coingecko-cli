@@ -6,11 +6,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/charmbracelet/huh"
-	"github.com/coingecko/coingecko-cli/internal/display"
 	"github.com/coingecko/coingecko-cli/internal/updater"
 	"github.com/spf13/cobra"
 )
@@ -29,8 +27,6 @@ func init() {
 }
 
 func runUpdate(cmd *cobra.Command, args []string) error {
-	display.PrintBanner()
-
 	method, _ := cmd.Flags().GetString("method")
 	if method == "" {
 		method = detectInstallMethod()
@@ -47,7 +43,7 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("checking for updates: %w", err)
 	}
-	if !validVersion(latest) {
+	if !updater.ValidVersion(latest) {
 		return fmt.Errorf("unexpected version format from GitHub: %q", latest)
 	}
 
@@ -79,10 +75,6 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 
 	return runInstallCommand(method)
 }
-
-var semverRe = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+$`)
-
-func validVersion(v string) bool { return semverRe.MatchString(v) }
 
 func detectInstallMethod() string {
 	exe, err := os.Executable()
