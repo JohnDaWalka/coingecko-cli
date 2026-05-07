@@ -23,6 +23,18 @@ func TestValidVersion(t *testing.T) {
 	}
 }
 
+func TestRunUpdate_RejectsDevBuild(t *testing.T) {
+	origVersion := version
+	t.Cleanup(func() { version = origVersion })
+
+	for _, v := range []string{"dev", ""} {
+		version = v
+		err := updateCmd.RunE(updateCmd, nil)
+		require.Error(t, err, "version=%q should be rejected", v)
+		assert.Contains(t, err.Error(), "development build")
+	}
+}
+
 func TestRunUpdate_AlreadyUpToDate(t *testing.T) {
 	orig := fetchLatestFunc
 	fetchLatestFunc = func() (string, error) { return "1.2.3", nil }
@@ -64,6 +76,10 @@ func TestRunUpdate_InvalidVersionFromGitHub(t *testing.T) {
 }
 
 func TestRunUpdate_InvalidMethod(t *testing.T) {
+	origVersion := version
+	version = "1.2.3"
+	t.Cleanup(func() { version = origVersion })
+
 	require.NoError(t, updateCmd.Flags().Set("method", "invalid"))
 	t.Cleanup(func() { _ = updateCmd.Flags().Set("method", "") })
 
