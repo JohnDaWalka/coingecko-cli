@@ -3,6 +3,8 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"runtime/debug"
+	"strings"
 
 	"github.com/coingecko/coingecko-cli/internal/display"
 	"github.com/coingecko/coingecko-cli/internal/updater"
@@ -14,6 +16,29 @@ var (
 	commit  = "none"
 	date    = "unknown"
 )
+
+// resolveBuildInfo fills in version/commit/date from the embedded module
+// BuildInfo when ldflags weren't injected (e.g. `go install module@vX.Y.Z`).
+// goreleaser and `make build` set these via -ldflags and skip this fallback.
+func resolveBuildInfo() {
+	bi, ok := debug.ReadBuildInfo()
+	if !ok {
+		return
+	}
+	if version == "dev" || version == "" {
+		if v := strings.TrimPrefix(bi.Main.Version, "v"); v != "" && v != "(devel)" {
+			version = v
+		}
+	}
+	for _, s := range bi.Settings {
+		if s.Key == "vcs.revision" && commit == "none" {
+			commit = s.Value
+		}
+		if s.Key == "vcs.time" && date == "unknown" {
+			date = s.Value
+		}
+	}
+}
 
 var rootCmd = &cobra.Command{
 	Use:     "cg",
@@ -30,6 +55,8 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
+	resolveBuildInfo()
+	rootCmd.Version = version
 	rootCmd.PersistentFlags().StringP("output", "o", "table", "Output format (table, json)")
 }
 

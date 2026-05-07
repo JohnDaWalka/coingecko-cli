@@ -27,6 +27,10 @@ func init() {
 }
 
 func runUpdate(cmd *cobra.Command, args []string) error {
+	if version == "dev" || version == "" {
+		return fmt.Errorf("this is a development build (version=%q); install a real release before running 'cg update' (see README install instructions)", version)
+	}
+
 	method, _ := cmd.Flags().GetString("method")
 	if method == "" {
 		method = detectInstallMethod()
