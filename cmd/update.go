@@ -121,6 +121,7 @@ func runInstallCommand(method string) error {
 		name = "brew"
 		args = []string{"upgrade", "coingecko/coingecko-cli/cg"}
 	case "go":
+		warnf("Note: 'go install' produces a binary named 'coingecko-cli'. If you invoke this CLI as 'cg', make sure you have an alias or symlink (e.g. alias cg=coingecko-cli).\n\n")
 		name = "go"
 		args = []string{"install", "github.com/coingecko/coingecko-cli@latest"}
 	default: // "script"

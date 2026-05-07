@@ -54,6 +54,18 @@ curl -sSfL https://raw.githubusercontent.com/coingecko/coingecko-cli/main/instal
 go install github.com/coingecko/coingecko-cli@latest
 ```
 
+This installs a binary named `coingecko-cli` (matching the module path). To use it as `cg`, add an alias to your shell rc:
+
+```sh
+alias cg=coingecko-cli
+```
+
+Or symlink it onto your `$PATH`:
+
+```sh
+ln -s "$(go env GOBIN 2>/dev/null || echo "$(go env GOPATH)/bin")/coingecko-cli" /usr/local/bin/cg
+```
+
 ### Manual
 
 Download the binary for your platform from [Releases](https://github.com/coingecko/coingecko-cli/releases), extract, and place `cg` in your `$PATH`.
