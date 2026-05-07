@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/coingecko/coingecko-cli/internal/display"
+	"github.com/coingecko/coingecko-cli/internal/updater"
 	"github.com/spf13/cobra"
 )
 
@@ -21,7 +22,10 @@ var rootCmd = &cobra.Command{
 	Version: version,
 	Run: func(cmd *cobra.Command, args []string) {
 		display.PrintLogo()
-		display.PrintWelcomeBox()
+		display.PrintWelcomeBox(version)
+		if info := updater.Check(version); info != nil && info.UpdateAvailable {
+			display.PrintUpdateReminder(info.CurrentVersion, info.LatestVersion)
+		}
 	},
 }
 

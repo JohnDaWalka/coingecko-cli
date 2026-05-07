@@ -54,6 +54,18 @@ curl -sSfL https://raw.githubusercontent.com/coingecko/coingecko-cli/main/instal
 go install github.com/coingecko/coingecko-cli@latest
 ```
 
+This installs a binary named `coingecko-cli` (matching the module path). To use it as `cg`, add an alias to your shell rc:
+
+```sh
+alias cg=coingecko-cli
+```
+
+Or symlink it onto your `$PATH`:
+
+```sh
+ln -s "$(go env GOBIN 2>/dev/null || echo "$(go env GOPATH)/bin")/coingecko-cli" /usr/local/bin/cg
+```
+
 ### Manual
 
 Download the binary for your platform from [Releases](https://github.com/coingecko/coingecko-cli/releases), extract, and place `cg` in your `$PATH`.
@@ -333,6 +345,21 @@ cg watch --ids bitcoin --dry-run         # Show WebSocket request info
 
 ---
 
+### `cg update` — Upgrade the CLI
+
+Check for a new version and upgrade in one step. Auto-detects whether you installed via Homebrew, `go install`, or the install script, and hands off to the right tool.
+
+```sh
+cg update
+
+# Override install method if auto-detection gets it wrong
+cg update --method homebrew   # or: go, script
+```
+
+The CLI also checks for updates on launch (cached 24h) and shows a reminder if you're behind. Set `CG_NO_UPDATE_CHECK=1` to disable this in CI.
+
+---
+
 ## Category Filtering
 
 CoinGecko tracks 500+ categories including Real World Assets, commodities, and tokenized stocks. Use the `--category` flag to filter:
@@ -422,6 +449,7 @@ Commands:
   top-gainers-losers   Show top gaining and losing coins (paid plans only)
   watch                Stream live coin prices via WebSocket (analyst or above)
   tui                  Interactive terminal UI (markets, trending)
+  update               Upgrade the CLI to the latest version
   commands             List all commands with API metadata (for agents/LLMs)
   help                 Print help for a command
 

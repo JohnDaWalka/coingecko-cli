@@ -112,7 +112,7 @@ coingecko-cli/
 - **Release workflow**: `.github/workflows/release.yml` triggers on `v*` tags, requires `HOMEBREW_TAP_TOKEN` repo secret for tap repo write access
 - **Tagging**: always tag from `main` after pulling latest — `git tag vX.Y.Z && git push origin vX.Y.Z`
 - **Install script**: `install.sh` downloads the latest release binary from GitHub Releases
-- **Go install**: `go install github.com/coingecko/coingecko-cli@latest`
+- **Go install**: `go install github.com/coingecko/coingecko-cli@latest` — produces a binary named `coingecko-cli` (module-path basename). Users alias or symlink it to `cg`; the `cg update --method go` flow prints this heads-up before running install.
 
 ## Key Design Decisions
 
