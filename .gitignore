@@ -1,5 +1,5 @@
 # Binaries
-cg
+/cg
 *.exe
 *.exe~
 *.dll
@@ -28,6 +28,13 @@ Thumbs.db
 
 # Build
 dist/
+
+# npm platform binaries (copied during CI publish)
+npm/cg-*/cg
+npm/cg-*/cg.exe
+
+# npm umbrella README (copied from root during CI publish)
+npm/cg/README.md
 
 # Secrets
 .env

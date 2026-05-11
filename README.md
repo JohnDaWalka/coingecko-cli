@@ -42,6 +42,14 @@ brew tap coingecko/coingecko-cli
 brew install cg
 ```
 
+### npm
+
+```sh
+npm install -g @coingecko/cg
+```
+
+Works on macOS, Linux, and Windows (x64 and arm64). Requires Node.js >= 20. The right native binary for your platform is fetched via npm `optionalDependencies`; no build step.
+
 ### Shell script
 
 ```sh

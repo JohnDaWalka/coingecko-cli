@@ -1,0 +1,17 @@
+{
+  "name": "@coingecko/cg-linux-x64",
+  "version": "0.0.0",
+  "description": "CoinGecko CLI - Real Time & Historical Crypto Data (Linux x64)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/coingecko/coingecko-cli.git"
+  },
+  "homepage": "https://github.com/coingecko/coingecko-cli",
+  "bugs": {
+    "url": "https://github.com/coingecko/coingecko-cli/issues"
+  },
+  "license": "MIT",
+  "os": ["linux"],
+  "cpu": ["x64"],
+  "files": ["cg"]
+}
