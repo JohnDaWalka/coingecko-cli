@@ -50,6 +50,14 @@ if [ ! -f "$ARCHIVE_PATH" ]; then
   exit 1
 fi
 
+# Clean up test artifacts on any exit path (success, failure, set -e abort).
+cleanup() {
+  [ -n "${PACK_DIR:-}" ] && rm -rf "$PACK_DIR"
+  [ -n "${TEST_DIR:-}" ] && rm -rf "$TEST_DIR"
+  rm -f "${NPM_DIR}/cg/README.md" "${PLATFORM_DIR}/cg"
+}
+trap cleanup EXIT
+
 # Step 1: Extract binary into platform package
 echo "  Extracting ${ARCHIVE} into ${PLATFORM_PKG}/"
 tmpdir=$(mktemp -d)
@@ -104,15 +112,7 @@ if echo "$OUTPUT" | grep -qi "coingecko\|cg\|${VERSION}"; then
 else
   echo "  Error: unexpected output from cg version:"
   echo "    ${OUTPUT}"
-  rm -rf "$PACK_DIR" "$TEST_DIR"
   exit 1
 fi
-
-# Cleanup
-rm -rf "$PACK_DIR" "$TEST_DIR"
-# Remove binary extracted for testing (CI will re-extract during publish)
-rm -f "${PLATFORM_DIR}/cg"
-# Remove the copied README (regenerated on each run)
-rm -f "${NPM_DIR}/cg/README.md"
 
 echo "=== smoke test passed ==="

@@ -157,6 +157,7 @@ else
 
   # Copy the project README so npmjs.com shows the same content as GitHub.
   cp "${ROOT_DIR}/README.md" "${UMBRELLA_DIR}/README.md"
+  trap 'rm -f "${UMBRELLA_DIR}/README.md"' EXIT
 
   echo "  Publishing @coingecko/cg@${VERSION}..."
   npm publish "${UMBRELLA_DIR}" --access public --provenance
