@@ -78,6 +78,10 @@ node -e "
 # Step 2: npm pack both packages
 PACK_DIR=$(mktemp -d)
 
+# Copy the project README into the umbrella so the packed tarball matches
+# what gets published.
+cp "${ROOT_DIR}/README.md" "${NPM_DIR}/cg/README.md"
+
 echo "  Packing platform package..."
 PLATFORM_TGZ=$(npm pack "${PLATFORM_DIR}" --pack-destination "$PACK_DIR" 2>/dev/null | tail -1)
 
@@ -108,5 +112,7 @@ fi
 rm -rf "$PACK_DIR" "$TEST_DIR"
 # Remove binary extracted for testing (CI will re-extract during publish)
 rm -f "${PLATFORM_DIR}/cg"
+# Remove the copied README (regenerated on each run)
+rm -f "${NPM_DIR}/cg/README.md"
 
 echo "=== smoke test passed ==="

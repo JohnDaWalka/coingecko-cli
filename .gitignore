@@ -33,6 +33,9 @@ dist/
 npm/cg-*/cg
 npm/cg-*/cg.exe
 
+# npm umbrella README (copied from root during CI publish)
+npm/cg/README.md
+
 # Secrets
 .env
 .env.*

@@ -155,6 +155,9 @@ if is_published "@coingecko/cg" "$VERSION"; then
 else
   set_version "${UMBRELLA_DIR}/package.json" "$VERSION" "$VERSION"
 
+  # Copy the project README so npmjs.com shows the same content as GitHub.
+  cp "${ROOT_DIR}/README.md" "${UMBRELLA_DIR}/README.md"
+
   echo "  Publishing @coingecko/cg@${VERSION}..."
   npm publish "${UMBRELLA_DIR}" --access public --provenance
 fi
