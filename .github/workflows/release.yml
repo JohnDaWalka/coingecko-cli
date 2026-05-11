@@ -34,6 +34,10 @@ jobs:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
 
+      # npm Trusted Publishing requires npm >= 11.5.1; setup-node@v6 ships npm 10.x.
+      - name: Upgrade npm
+        run: npm install -g npm@latest
+
       - name: Smoke test npm packages
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
@@ -43,5 +47,3 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           VERSION="$VERSION" scripts/npm-publish.sh
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
