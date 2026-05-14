@@ -355,13 +355,13 @@ cg watch --ids bitcoin --dry-run         # Show WebSocket request info
 
 ### `cg update` — Upgrade the CLI
 
-Check for a new version and upgrade in one step. Auto-detects whether you installed via Homebrew, `go install`, or the install script, and hands off to the right tool.
+Check for a new version and upgrade in one step. Auto-detects whether you installed via Homebrew, npm, `go install`, or the install script, and hands off to the right tool.
 
 ```sh
 cg update
 
 # Override install method if auto-detection gets it wrong
-cg update --method homebrew   # or: go, script
+cg update --method homebrew   # or: npm, go, script
 ```
 
 The CLI also checks for updates on launch (cached 24h) and shows a reminder if you're behind. Set `CG_NO_UPDATE_CHECK=1` to disable this in CI.

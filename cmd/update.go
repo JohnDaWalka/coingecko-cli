@@ -22,7 +22,7 @@ var updateCmd = &cobra.Command{
 }
 
 func init() {
-	updateCmd.Flags().String("method", "", "Install method override (homebrew, go, script)")
+	updateCmd.Flags().String("method", "", "Install method override (homebrew, npm, go, script)")
 	rootCmd.AddCommand(updateCmd)
 }
 
@@ -36,9 +36,9 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 		method = detectInstallMethod()
 	} else {
 		switch method {
-		case "homebrew", "go", "script":
+		case "homebrew", "npm", "go", "script":
 		default:
-			return fmt.Errorf("unknown install method %q — must be one of: homebrew, go, script", method)
+			return fmt.Errorf("unknown install method %q, must be one of: homebrew, npm, go, script", method)
 		}
 	}
 
@@ -92,9 +92,16 @@ func detectInstallMethod() string {
 	return classifyInstallPath(exe)
 }
 
-// classifyInstallPath returns the install method ("homebrew", "go", or "script")
+// classifyInstallPath returns the install method ("homebrew", "npm", "go", or "script")
 // for a resolved executable path.
 func classifyInstallPath(exe string) string {
+	// npm check runs before homebrew because Homebrew-installed Node puts npm globals
+	// under /opt/homebrew/lib/node_modules/, which would otherwise match the homebrew rule.
+	// filepath.ToSlash is a no-op off Windows, so normalize backslashes explicitly.
+	if strings.Contains(strings.ReplaceAll(exe, `\`, "/"), "node_modules/@coingecko/cg-") {
+		return "npm"
+	}
+
 	if strings.Contains(exe, "/Cellar/") ||
 		strings.Contains(exe, "/homebrew/") ||
 		strings.Contains(exe, "/opt/homebrew/") {
@@ -124,6 +131,9 @@ func runInstallCommand(method string) error {
 	case "homebrew":
 		name = "brew"
 		args = []string{"upgrade", "coingecko/coingecko-cli/cg"}
+	case "npm":
+		name = "npm"
+		args = []string{"install", "-g", "@coingecko/cg@latest"}
 	case "go":
 		warnf("Note: 'go install' produces a binary named 'coingecko-cli'. If you invoke this CLI as 'cg', make sure you have an alias or symlink (e.g. alias cg=coingecko-cli).\n\n")
 		name = "go"
