@@ -31,7 +31,7 @@ jobs:
 
       - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
-          node-version: "20"
+          node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
       - name: Smoke test npm packages
@@ -43,5 +43,3 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           VERSION="$VERSION" scripts/npm-publish.sh
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
