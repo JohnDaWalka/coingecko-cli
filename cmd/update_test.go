@@ -131,6 +131,24 @@ func TestClassifyInstallPath_Go_ExplicitGOPATH(t *testing.T) {
 	assert.Equal(t, "go", classifyInstallPath(exe))
 }
 
+func TestClassifyInstallPath_Npm(t *testing.T) {
+	t.Setenv("GOBIN", "")
+	t.Setenv("GOPATH", "")
+
+	cases := []struct {
+		path string
+		desc string
+	}{
+		{"/usr/local/lib/node_modules/@coingecko/cg-darwin-arm64/cg", "macOS npm global"},
+		{"/home/user/.npm-global/lib/node_modules/@coingecko/cg-linux-x64/cg", "Linux user npm prefix"},
+		{"/opt/homebrew/lib/node_modules/@coingecko/cg-darwin-arm64/cg", "Homebrew-node npm prefix"},
+		{`C:\Users\runner\AppData\Roaming\npm\node_modules\@coingecko\cg-win32-x64\cg.exe`, "Windows npm global"},
+	}
+	for _, tc := range cases {
+		assert.Equal(t, "npm", classifyInstallPath(tc.path), tc.desc)
+	}
+}
+
 func TestClassifyInstallPath_Script(t *testing.T) {
 	t.Setenv("GOBIN", "")
 	t.Setenv("GOPATH", "")
@@ -156,7 +174,7 @@ func TestClassifyInstallPath_GoBinNotParentDir(t *testing.T) {
 
 func TestDetectInstallMethod_ReturnsValidMethod(t *testing.T) {
 	method := detectInstallMethod()
-	assert.Contains(t, []string{"homebrew", "go", "script"}, method)
+	assert.Contains(t, []string{"homebrew", "npm", "go", "script"}, method)
 }
 
 func TestRunUpdate_FetchError(t *testing.T) {

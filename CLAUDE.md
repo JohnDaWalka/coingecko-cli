@@ -113,6 +113,8 @@ coingecko-cli/
 - **Tagging**: always tag from `main` after pulling latest — `git tag vX.Y.Z && git push origin vX.Y.Z`
 - **Install script**: `install.sh` downloads the latest release binary from GitHub Releases
 - **Go install**: `go install github.com/coingecko/coingecko-cli@latest` — produces a binary named `coingecko-cli` (module-path basename). Users alias or symlink it to `cg`; the `cg update --method go` flow prints this heads-up before running install.
+- **npm**: `npm install -g @coingecko/cg` — umbrella package in `npm/cg/` plus 6 platform sub-packages (`npm/cg-<os>-<arch>/`) published via OIDC Trusted Publishing from `release.yml`. Each package needs its trusted publisher configured on npmjs.com (Repository: `coingecko/coingecko-cli`, Workflow: `release.yml`) before its first publish. Publish flow lives in `scripts/npm-publish.sh`.
+- **`cg update` install methods**: auto-detects `homebrew`, `npm`, `go`, or `script` from the executable path. npm detection (`node_modules/@coingecko/cg-*`) runs before homebrew because Homebrew-installed Node puts npm globals under `/opt/homebrew/lib/node_modules/`.
 
 ## Key Design Decisions
 
